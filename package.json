@@ -24,6 +24,7 @@
   "dependencies": {
     "@marcopeg/utils": "^1.9.0",
     "pg": "^7.4.3",
+    "pg-pubsub": "^0.4.0",
     "winston": "^2.4.2"
   }
 }
