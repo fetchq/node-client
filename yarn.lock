@@ -2,9 +2,10 @@
 # yarn lockfile v1
 
 
-"@marcopeg/utils@^1.9.0":
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/@marcopeg/utils/-/utils-1.9.0.tgz#7cd02230c2c933e427aa594e51488252ce6a0957"
+"@marcopeg/utils@^1.9.1":
+  version "1.18.0"
+  resolved "https://registry.yarnpkg.com/@marcopeg/utils/-/utils-1.18.0.tgz#cf0a83affc879f41315d18b51297fc354d7c2dc8"
+  integrity sha512-02ZeTeIvkox2Z+6DL/oQX3+F1Sr2dJrvrBdiC1eqZpWbcILMoZXnLtmKsX2K0X2E2sUEIVD8F6jSSd/IXr51PA==
   dependencies:
     babel-runtime "^6.26.0"
 
