@@ -2,7 +2,7 @@ console.log('FetchQ Client // Examples // App01')
 const fetchq = require('fetchq');
 
 const client = fetchq({
-  logLevel: 'error',
+  logLevel: 'info',
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
   // Declare maintenance behaviours
   maintenance: {
@@ -16,17 +16,20 @@ const client = fetchq({
       name: 'q1',
       isActive: true,
       enableNotifications: true,
+      maintenance: {
+        sts: { delay: '30s', duration: '1m' },
+      },
     },
     {
       name: 'q2',
       isActive: true,
       enableNotifications: true,
-      maxAttempts: 1,
+      maxAttempts: 2,
       errorsRetention: '5m',
-      currentVersion: 2,
+      // currentVersion: 2,
       maintenance: {
         mnt: { delay: '3s', duration: '1m', limit: 100 },
-        sts: { delay: '30m', duration: '1m' },
+        sts: { delay: '30s', duration: '1m' },
         drp: { delay: '10m', duration: '1m' },
         cmp: { delay: '30m', duration: '1m' },
       },
@@ -36,25 +39,28 @@ const client = fetchq({
   workers: [
     {
       queue: 'q1',
-      delay: 0,
-      concurrency: 10,
+      // delay: 0,
+      // batch: 1,
+      // concurrency: 1,
       // sleep: 10000,
-      handler: async ({ subject, payload }, { ctx }) => {
-        console.log(`Q1 - ${subject}`, payload);
-        await ctx.doc.push('q2', {
-          subject,
-          payload: { ...payload, q1: true },
+      handler: async (doc, { client }) => {
+        client.logger.info(doc.queue, doc.payload);
+        await client.queue.logError(doc.queue, doc.subject, 'just for fun');
+        await client.doc.push('q2', {
+          subject: doc.subject,
+          payload: { ...doc.payload, q1: true },
         });
         return { action: 'drop' };
       },
     },
     {
       queue: 'q2',
-      delay: 0,
-      concurrency: 10,
+      // delay: 0,
+      // batch: 1,
+      // concurrency: 1,
       // sleep: 10000,
-      handler: (doc) => {
-        console.log(`Q2`, doc);
+      handler: (doc, { client }) => {
+        client.logger.info(doc.queue, doc.payload);
         return { action: 'drop'};
       },
     },
@@ -69,6 +75,6 @@ const client = fetchq({
   // Push random items into the queue
   setInterval(() => {
     client.doc.append('q1', { foo: 123 });
-  }, 1000)
+  }, 2500)
 
 })();
