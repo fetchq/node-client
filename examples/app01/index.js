@@ -4,53 +4,49 @@ const fetchq = require('fetchq');
 const client = fetchq({
   logLevel: 'info',
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
-  // Declare maintenance behaviours
+
+  /**
+   * Maintenance
+   * ===========
+   * Each FetchQ client runs maintenance jobs that are meant to groom the queue data
+   * and help improving performances.
+   */
   maintenance: {
     limit: 3,
     delay: 250,
     sleep: 5000,
   },
-  // Declare queues with settings
-  // this is optional, but will override any current setting at startup
+
+  /**
+   * Queues
+   * ===========
+   * This is an optional declaration of which queues should be available into the system
+   * at boot time the client will ensure those queues exist and update settings according
+   * to the informations that you provide here.
+   *
+   * You can also provide a `workerHandler` function and a `workerOptions` that will be used
+   * to prepare a worker definition out of this single setting.
+   *
+   * This definition list is normally handled by the service that puts stuff into the queue.
+   * It would be best for this service to be a singleton (no horizontal scalability) just to
+   * avoid racing conditions in creating and updating queues at boot time.
+   *
+   * Some of the configuration options will trigger index flushing that may be time consuming
+   * in large datasets. In any case, for large dataset projects we recomment to handle queues
+   * and settings manually with dabase migration tools.
+   */
   queues: [
+    // Q1
+    // this is the simple or the queues, it does very little so we write the worker
+    // handler's implementation directly here. It simply pushes documents into another queue
+    // with a decorated payload :-)
+    //
+    // once processed, the document is dropped
     {
       name: 'q1',
       isActive: true,
       enableNotifications: true,
-      maintenance: {
-        sts: { delay: '30s', duration: '1m' },
-      },
-    },
-    {
-      name: 'q2',
-      isActive: true,
-      enableNotifications: true,
-      maintenance: {
-        mnt: { delay: '100ms', duration: '1m', limit: 100 },
-        drp: { delay: '10m', duration: '1m' },
-        sts: { delay: '30s', duration: '1m' },
-        cmp: { delay: '30m', duration: '1m' },
-      },
-    },
-    {
-      name: 'q3',
-      isActive: true,
-      enableNotifications: true,
-      maxAttempts: 1,
-      errorsRetention: '24h',
-      maintenance: {
-        mnt: { delay: '10s', duration: '1m', limit: 100 },
-        drp: { delay: '10s', duration: '1m' },
-        sts: { delay: '1y', duration: '1m' },
-        cmp: { delay: '1y', duration: '1m' },
-      },
-    },
-  ],
-  // Declare workers
-  workers: [
-    {
-      queue: 'q1',
-      handler: async (doc, { client }) => {
+      workerHandler: async (doc, { client }) => {
         client.logger.info(doc.queue, doc.payload);
 
         await client.doc.push('q2', {
@@ -61,6 +57,58 @@ const client = fetchq({
         return { action: 'drop' };
       },
     },
+    // Q2
+    // here we just define the queue and it's settings
+    // the worker definition is provided later on.
+    //
+    // the interesting point here is that we know that this queue will reschedule
+    // a lot with short delays, so we reconfigure the maintenance job to run
+    // every second instead of the default (30s).
+    //
+    // this queue will also retain documents that are reschedules, so we want to
+    // keep a close eye on the stats, so we increase the snapshot frequency to
+    // 10 seconds instead of the default (1m)
+    {
+      name: 'q2',
+      isActive: true,
+      enableNotifications: true,
+      maintenance: {
+        mnt: { delay: '1s', duration: '1m', limit: 100 },
+        sts: { delay: '10s', duration: '1m' },
+      },
+    },
+    // Q3
+    // here we just define the queue and it's settings
+    // the worker definition is provided later on.
+    //
+    // the interesting point is that we allow this queue's workers to fail only
+    // once, so at the first rejection or unhandled exception the document will
+    // be killed.
+    {
+      name: 'q3',
+      isActive: true,
+      enableNotifications: true,
+      maxAttempts: 1,
+    },
+  ],
+
+  /**
+   * Workers
+   * ===========
+   * you can declare and configure workers outside the queue optional definition.
+   *
+   * This is the classic configuration of a "worker node", it just performs
+   * data-processing and queue maintenance.
+   *
+   * Also, we strongly recommend to write your handlers as Node modules and import
+   * them into the worker's configuration as dependencies.
+   */
+  workers: [
+    // Q2
+    // reschedule a document a few times just because we think it's fun,
+    // the document get then added into yet another queue.
+    //
+    // once processed, the document is dropped
     {
       queue: 'q2',
       concurrency: 5,
@@ -82,7 +130,8 @@ const client = fetchq({
         }
 
         // Just a custom persistent log...
-        await client.queue.logError(doc.queue, doc.subject, 'just for fun');
+        // queue name | document subject | error message [ error payload | reference id ]
+        await client.queue.logError(doc.queue, doc.subject, 'not yet time to process', doc);
 
         return {
           action: 'reschedule',
@@ -90,8 +139,16 @@ const client = fetchq({
         };
       },
     },
+    // Q3
+    // find out is the document's subject begins with a digit [0-9] and take different
+    // actions based on this intelligence.
+    //
+    // An interesting detail about this worker is that it customizes the default document
+    // lock time (5 minutes) to just 5 seconds so the cleanup maintenance process will
+    // quickly collect rejected documents and kill them.
     {
       queue: 'q3',
+      lock: '5s',
       handler: async (doc, { client }) => {
         client.logger.info(`${doc.queue} - ${doc.subject}`, doc.payload);
 
