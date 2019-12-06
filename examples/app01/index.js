@@ -5,6 +5,13 @@ const client = fetchq({
   logLevel: 'info',
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 
+  // Try to create a free Postgres database at: https://elephantsql.com
+  // and install FetchQ with the plain SQL installer script!
+  // ------
+  // connectionString: 'postgres://xxx:yyy@manny.db.elephantsql.com:5432/zzz',
+  // skipExtension: true,
+  // pool: { max: 1 },
+
   /**
    * Maintenance
    * ===========
@@ -177,6 +184,6 @@ const client = fetchq({
   // Push random items into the queue
   setInterval(() => {
     client.doc.append('q1', { foo: 123 });
-  }, 500)
+  }, 2500)
 
 })();
