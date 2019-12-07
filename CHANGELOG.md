@@ -1,5 +1,15 @@
 # FetchQ NodeJS Client - Changelog
 
+## v2.3.0
+
+- `doc.push` accepts a `delay` option that times out the execution of the query
+- `doc.pushMany` accepts a `delay` option that times out the execution of the query
+- `doc.append` accepts a `delay` option that times out the execution of the query
+- Add `client.onSome` that awaits for multiple events with timeout
+- Add `client.onPipeline` that handles a success/failure scenario with timeout
+- Add `client.emitPipelineComplete`
+- Add `client.emitPipelineFailed`
+
 ## v2.2.0
 
 - Add event emitter API (see `lib/functions/event-emitter.js`)
