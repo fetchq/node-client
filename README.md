@@ -1,3 +1,317 @@
 # FetchQ Node Client
 
-Provides a NodeJS interface to manage a FetchQ installation
+Provides a NodeJS interface to manage a FetchQ database instace.
+
+## Configure the Postgres Connection
+
+The _FetchQ_ client library gives you a function that returns a configured
+client that implements _FetchQ API_:
+
+```js
+const fetchq = require('fetchq');
+const client = fetchq();
+```
+
+**NOTE:** If you installed _FetchQ_ using the plain SQL method, you should pass a
+specifig configuration option `skipExtension: true` that prevents the client from
+interacting with the Postgres extension:
+
+```js
+const fetchq = require('fetchq');
+const client = fetchq({
+  skipExtension: true,
+  ...
+});
+```
+
+### Using ENV Variables
+
+By default _FetchQ Client_ tries to **use standard Postgres environment variables**
+to setup the connection, so that you don't have to bother with it programmatically:
+
+- PGUSER
+- PGPASSWORD
+- PGHOST
+- PGPORT
+- PGDATABASE
+
+From `v2.4.0` you can simply define a `PGSTRING` env variable that contains a complete
+connection uri [as documented here](https://node-postgres.com/features/connecting#Connection%20URI).
+
+### Configure the connection programmatically:
+
+You can set the connection's configuration programmatically:
+
+```js
+const client = fetchq({
+  connect: {
+    user: 'dbuser',
+    host: 'database.server.com',
+    database: 'mydb',
+    password: 'secretpassword',
+    port: 3211,
+  },
+});
+```
+
+Or you can pass a `connectionString`:
+
+```js
+const client = fetchq({
+  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
+});
+```
+
+### Pooling
+
+You can read about pooling in the [PG documentation](https://node-postgres.com/features/pooling), if you decide to diverge from the default settings, just pass a
+`pool` option:
+
+```js
+const client = fetchq({
+  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
+  pool: { max: 1, ... },
+});
+```
+
+## Configure Queues
+
+```js
+const client = fetchq({
+  queues: [
+    {
+      // name of the queue, used later on to interact with it
+      name: 'q1',
+
+      // when false, any active worker will pause
+      isActive: true,
+
+      // speeds up FIFO performances immensely but it uses a bit more CPU.
+      enableNotifications: true,
+
+      // fail tolerance of the queue, before considering a document dead
+      maxAttempts: 5,
+
+      // max log duration in a per-queue errors table
+      errorsRetention: '24h',
+
+      // settings of the per-queue maintenance jobs
+      maintenance: {
+        // document status maintenance
+        mnt: { delay: '1m', duration: '5m', limit: 500 },
+
+        // queue stats screenshots for plotting perfomances through time
+        sts: { delay: '1m', duration: '5m' },
+
+        // computed stats job
+        cmp: { delay: '1m', duration: '5m' }, // ???
+
+        // errors and metrics cleanup job
+        drp: { delay: '1m', duration: '5m' },
+      },
+    }
+  ]
+})
+```
+
+### enableNotifications
+
+When this option is set to `true` _FetchQ_ activates triggers and notifications for the
+queue, and the client subscribes to those notifications to wake up after idle time.
+
+**Enable when:**
+This is a perfect setting for queues that may stay idle for long periods of time,
+or for queues that must **respond quickly to user's actions**.
+
+**Disable when:**
+Queues that need to handle repetitive but not near-real-time critical tasks may
+decide not to use this feature and just rely on simple polling. This has proven to
+be more effective expecially when dealing with massive data into a queue.
+
+### maintenance settings
+
+Each queue's health relies on a list of maintenance tasks that must be executed in
+time by each _FetchQ Client_'s maintenance service.
+
+You can fine tune how often those jobs should be executed and therefore fine tune the
+reactiveness of each queue and the load on the system.
+
+The `mtn` jobs updates the document's status, the faster it goes the more reactive the
+queue when it comes to execute a scheduled document that became pending.
+
+The `sts` job takes screenshots of the queue metrics and stores it into a timeserie
+table that you may want to use for plotting chards and visualize the queue's status.
+Run this as often as you need, just be careful because it may produce a lot of data.
+
+The `cmp` job works on the queue timeserie stats table and creates _computed metrics_
+such how many documents per minute or so. This job may be heavy.
+
+The `drp` job tries to drop data that is not necessary anymore. It removes old error
+logs and metrics. This is not a critical job, but it is definetly good to run it every
+few minutes to keep your database lighter.
+
+## Configure Workers
+
+```js
+const client = fetchq({
+  workers: [
+    {
+      queue: 'q2',
+      name: 'my-first-worker',
+
+      // how many concurrent service instances to run.
+      // this is not parallel execution, just concurrent. It will speed up a lot
+      // when workers deal with I/O operations such disk or network.
+      // to achieve real parallelization, use Docker or add worker servers to your
+      // cluster.
+      concurrency: 1,
+
+      // how many documents to pick in a single query
+      // the more the documents, the less the workload on the database, but also
+      // the higher the chance of producing orphans that will eventually reject
+      batch: 1,
+
+      // esitmated max duration of a batch operation.
+      // if the worker doesn't complete within this timeframe, the document
+      // will considered rejected and cumulates errors
+      lock: '5m',
+
+      // idle time between documents execution
+      delay: 250,
+
+      // idle time after completing a queue
+      sleep: 5000,
+
+      // the function that handles a document
+      // see next chapter
+      handler: () => {},
+    }
+  ]
+})
+```
+
+## The Worker's Handler Function
+
+```js
+const handler = async (doc, { client }) => {
+  // use the builtin logger
+  client.logger.info(`handling ${doc.queue}::${doc.subject}`);
+
+  // append the document into another queue
+  await client.doc.append('another-queue', doc.payload);
+
+  return {
+    action: 'reschedule',
+    nextIteration: '+ 1 week',
+  };
+};
+```
+
+## Returning Actions
+
+The handler function should return an object that defines which action should be
+performed on the document.
+
+Every action is capable of producing a log entry into the queue's error table. You
+may want to produce a persistent log even if is not eactly an error, in a future
+rewrite those tables will be renamed into "xxx_logs".
+
+```js
+return {
+  action: 'complete',
+  message: 'this is the log message',
+  details: { key: 'just a json payload to your log entry' },
+  refId: 'I really forgot why I added this field to the schema...',
+}
+```
+
+### reschedule
+
+The document will be scheduled for another execution. You should provide a
+`nextIteration` option that could be a Javascript Date object or a valid
+Postgres interval string such `+ 1 minute`, `-20y`, ...
+
+### reject
+
+The document will be scheduled for another execution attempt according to the queue's
+settings and lock duration.
+
+### complete
+
+The document will be marked with a `status = 3` and will never be executed again.
+
+### kill
+
+The document will be marked with a `status = -1` and will never be executed again.
+
+### drop
+
+The document will be deleted from the queue's table
+
+## Configure Maintenance
+
+```js
+const client = fetchq({
+  maintenance: {
+    limit: 3,
+    delay: 250,
+    sleep: 5000,
+  },
+});
+```
+
+## Initialization & Startup
+
+A normal boot sequence would be obtained with:
+
+```js
+await client.init();
+await client.start();
+```
+
+or with the shorter version:
+
+```js
+await client.boot();
+```
+
+that does exactly as the code before.
+
+`client.init` will apply all the provided configuration to the _FetchQ db_:
+
+- create missing queues
+- apply queue related settings
+- apply queue related jobs settings
+- recalculate indexes if needed
+- apply maintenance settings
+
+`client.start` will spin up the active services like:
+
+- queue workers instances
+- queue maintenance workers
+
+## A word on `init()`
+
+The `init()` method is useful to distribute _FetchQ_ configuration programmatically
+and apply it to the database without messing with SQL and Postgres clients.
+
+It works exceptionally good during development or when you have only one active
+client.
+
+In real life production settings, where you have probably many servers that process
+the queue, it is a better idea to skip the init as it may end up in
+**boot-time racing conditions**.
+
+I normally implement the `fetchq.init()` method in my main backend service that takes
+the lead in configuring the whole system and performs schema migrations.
+
+Any other second level service (such a worker service) should be fail tolerant and
+capable of awaiting for the correct configuration to eventually apply in order to
+start doing its job.
+
+
+
+
+
+
+

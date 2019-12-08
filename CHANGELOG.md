@@ -1,5 +1,13 @@
 # FetchQ NodeJS Client - Changelog
 
+## v2.4.0
+
+- add utility function `client.boot()`
+- the `payload` is optional to actions reschedule, complete and kill. If not passed
+  the document's payload will not be affected
+- the `kill` action can now take a message and produce an error log
+- add the possibility to log an error message for every handler return actions
+
 ## v2.3.0
 
 - `doc.push` accepts a `delay` option that times out the execution of the query
