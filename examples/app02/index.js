@@ -28,13 +28,14 @@ const client = fetchq({
     {
       queue: 'process_signup',
       lock: '20s',
-      handler: async (doc, { client }) => {
+      handler: async (doc, { client, complete, kill }) => {
         const { username } = doc.payload;
 
         // Apply validation to the username
         if (username.length <= 5) {
-          client.emitPipelineFailed(`signup-${username}`, 'username too short!');
-          return { action: 'kill', ...doc }
+          const message = 'username is too short';
+          client.emitPipelineFailed(`signup-${username}`, message);
+          return kill({ message });
         }
 
         // Push the document forward down the line
@@ -43,13 +44,13 @@ const client = fetchq({
         // keep the processed document as long-term data log.
         // (this is not really efficient, would be better to move the
         // log into a timeserie db like TimescaleDB)
-        return { action: 'complete', ...doc };
+        return complete();
       },
     },
     // calculates the user's id and tries to save the user.
     {
       queue: 'process_signup_id',
-      handler: async (doc, { client }) => {
+      handler: async (doc, { client, drop, kill, logError }) => {
         const { username } = doc.payload;
 
         const payload = {
@@ -67,14 +68,12 @@ const client = fetchq({
         // emit a signal based on the signup result:
         if (res.queued_docs > 0) {
           client.emitPipelineComplete(`signup-${username}`, payload);
+          return drop();
         } else {
-          client.emitPipelineFailed(`signup-${username}`, 'username exists!');
+          message = 'username exists!';
+          client.emitPipelineFailed(`signup-${username}`, message);
+          return kill({ message });
         }
-
-        // keep the processed document as long-term data log.
-        // (this is not really efficient, would be better to move the
-        // log into a timeserie db like TimescaleDB)
-        return { action: 'drop' };
       },
     }],
 });

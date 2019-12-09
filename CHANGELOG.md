@@ -7,6 +7,7 @@
   the document's payload will not be affected
 - the `kill` action can now take a message and produce an error log
 - add the possibility to log an error message for every handler return actions
+- add document's action creators
 
 ## v2.3.0
 

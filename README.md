@@ -193,60 +193,70 @@ const client = fetchq({
 ## The Worker's Handler Function
 
 ```js
-const handler = async (doc, { client }) => {
+const handler = async (doc, { client, reschedule }) => {
   // use the builtin logger
   client.logger.info(`handling ${doc.queue}::${doc.subject}`);
 
   // append the document into another queue
   await client.doc.append('another-queue', doc.payload);
 
-  return {
-    action: 'reschedule',
-    nextIteration: '+ 1 week',
-  };
+  return reschedule('+1 week');
 };
 ```
 
 ## Returning Actions
 
 The handler function should return an object that defines which action should be
-performed on the document.
-
-Every action is capable of producing a log entry into the queue's error table. You
-may want to produce a persistent log even if is not eactly an error, in a future
-rewrite those tables will be renamed into "xxx_logs".
+performed on the document. In order to facilitate this activity and avoid actions
+names misspell, you can use **action creators** from the handler's context:
 
 ```js
-return {
-  action: 'complete',
-  message: 'this is the log message',
-  details: { key: 'just a json payload to your log entry' },
-  refId: 'I really forgot why I added this field to the schema...',
-}
+const handler = (doc, ctx) => {
+  return ctx.reschedule('+1 week');
+  return ctx.reject('error message...');
+  return ctx.complete();
+  return ctx.kill();
+  return ctx.drop();
+};
 ```
 
-### reschedule
+All action creators take a second argument as an _options object_ that you can use
+to modify the document's payload or to produce an error log along with the action:
+
+```js
+reschedule('+1 week', {
+  // mutate the document's payload
+  payload: { ...doc.payload, newField: 'hoho' },
+
+  // write a custom error_log
+  message: 'yes, do it again',
+  details: { count: 22 },
+  refId: 'I really forgot why I added this field to the schema...',
+});
+```
+
+### reschedule(nextIteration, [options])
 
 The document will be scheduled for another execution. You should provide a
 `nextIteration` option that could be a Javascript Date object or a valid
 Postgres interval string such `+ 1 minute`, `-20y`, ...
 
-### reject
+### reject(errorMessage, [options])
 
 The document will be scheduled for another execution attempt according to the queue's
 settings and lock duration.
 
-### complete
+### complete([options])
 
 The document will be marked with a `status = 3` and will never be executed again.
 
-### kill
+### kill([options])
 
 The document will be marked with a `status = -1` and will never be executed again.
 
-### drop
+### drop([options])
 
-The document will be deleted from the queue's table
+The document will be deleted from the queue's table.
 
 ## Configure Maintenance
 
