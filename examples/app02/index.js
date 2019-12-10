@@ -28,30 +28,30 @@ const client = fetchq({
     {
       queue: 'process_signup',
       lock: '20s',
-      handler: async (doc, { client, complete, kill }) => {
-        const { username } = doc.payload;
+      handler: async (doc, { client }) => {
+        const { username, pipelineId } = doc.payload;
 
         // Apply validation to the username
         if (username.length <= 5) {
           const message = 'username is too short';
-          client.emitPipelineFailed(`signup-${username}`, message);
-          return kill({ message });
+          await client.emitPipelineFailed(pipelineId, message);
+          return doc.kill(message);
         }
 
         // Push the document forward down the line
-        await client.doc.append('process_signup_id', doc.payload);
+        await doc.forward('process_signup_id');
 
         // keep the processed document as long-term data log.
         // (this is not really efficient, would be better to move the
         // log into a timeserie db like TimescaleDB)
-        return complete();
+        return doc.complete();
       },
     },
     // calculates the user's id and tries to save the user.
     {
       queue: 'process_signup_id',
-      handler: async (doc, { client, drop, kill, logError }) => {
-        const { username } = doc.payload;
+      handler: async (doc, { client }) => {
+        const { username, pipelineId } = doc.payload;
 
         const payload = {
           ...doc.payload,
@@ -67,12 +67,12 @@ const client = fetchq({
 
         // emit a signal based on the signup result:
         if (res.queued_docs > 0) {
-          client.emitPipelineComplete(`signup-${username}`, payload);
-          return drop();
+          await client.emitPipelineComplete(pipelineId, payload);
+          return doc.complete();
         } else {
           message = 'username exists!';
-          client.emitPipelineFailed(`signup-${username}`, message);
-          return kill({ message });
+          client.emitPipelineFailed(pipelineId, message);
+          return doc.kill({ message });
         }
       },
     }],
@@ -86,11 +86,15 @@ const server = fastify({ logger: false });
 server.post('/', async (req, reply) => {
   try {
     // setup the pipeline name with an optional timeout
-    const pipeline = client.onPipeline(`signup-${req.body.username}`, 1000);
+    const pipelineId = `signup-${req.body.username}`;
+    const pipeline = client.onPipeline(pipelineId, 1000);
 
     // push the document into the pipeline
     // a worker will handle this and process the pipeline
-    client.doc.append('process_signup', req.body)
+    await client.doc.append('process_signup', {
+      pipelineId,
+      ...req.body,
+    });
 
     // await for the pipeline to complete before sending out stuff
     // this will hang the request until the pipeline emits or timeout happens
@@ -104,5 +108,5 @@ server.post('/', async (req, reply) => {
 ;(async () => {
   await client.init();
   await client.start();
-  await server.listen(8080);
+  await server.listen(8080, '::');
 })();

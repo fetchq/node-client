@@ -55,13 +55,8 @@ const client = fetchq({
       enableNotifications: true,
       workerHandler: async (doc, { client }) => {
         client.logger.info(doc.queue, doc.payload);
-
-        await client.doc.push('q2', {
-          subject: doc.subject,
-          payload: { ...doc.payload, q1: true },
-        });
-
-        return { action: 'drop' };
+        await doc.forward('q2', { ...doc.payload, q1: true });
+        return doc.drop();
       },
     },
     // Q2
@@ -125,25 +120,19 @@ const client = fetchq({
         // after a few repetition, this document gets re-routed into
         // yet another queue for further processing.
         if (doc.iterations >= 3) {
-          await client.doc.push('q3', {
-            subject: doc.subject,
-            payload: {
-              ...doc.payload,
-              q2: true,
-              iterations: doc.iterations,
-            },
+          await doc.forward('q3', {
+            ...doc.payload,
+            q2: true,
+            iterations: doc.iterations,
           });
-          return { action: 'drop' };
+          return doc.drop();
         }
 
-        // Just a custom persistent log...
-        // queue name | document subject | error message [ error payload | reference id ]
-        await client.queue.logError(doc.queue, doc.subject, 'not yet time to process', doc);
+        // Just a custom persistent log bound to the current document
+        // error message [ error payload | reference id ]
+        await doc.logError('not yet time to process', doc);
 
-        return {
-          action: 'reschedule',
-          nextIteration: '+1ms',
-        };
+        return doc.reschedule('+1ms');
       },
     },
     // Q3
@@ -161,15 +150,12 @@ const client = fetchq({
 
         // if the subject begins with a number, the process is finally completed
         if (doc.subject.substr(0, 1) === parseInt(doc.subject.substr(0, 1), 10).toString()) {
-          return { action: 'complete'}
+          return doc.complete();
 
         // else we reject the document with a reason that will be logged into
         // the errors table. the cleanup maintenance will eventually kill the document
         } else {
-          return {
-            action: 'reject',
-            message: 'not a number',
-          }
+          return doc.reject('not a number');
         }
       }
     },

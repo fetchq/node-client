@@ -8,6 +8,9 @@
 - the `kill` action can now take a message and produce an error log
 - add the possibility to log an error message for every handler return actions
 - add document's action creators
+- packed document's actions creators into `actions` within the context
+- added `doc.logError(message, [details, refId]` to the document object
+- added `doc.forward(queue, [ payload ])` to the document object
 
 ## v2.3.0
 
