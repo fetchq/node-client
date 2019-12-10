@@ -319,7 +319,109 @@ Any other second level service (such a worker service) should be fail tolerant a
 capable of awaiting for the correct configuration to eventually apply in order to
 start doing its job.
 
+## Workflow API
 
+You can use a workflow to distribute work into one or more workers and await
+for the entire process to finish.
+
+A signup process may involve several steps, performed in a specific order, and
+each step may fail due to many different reasons.
+
+Normally you write all those steps into an asynchronous route handler that will
+consume quite a few resources from your user facing server... That may result into
+an unresponsive or slow website.
+
+With FetchQ Workflow you can free your main process of any computational burden
+and ejnoy the isolation and horizontal scalability of a queue system!
+
+```js
+const workflow = client.createWorkflow({
+  queue: 'signup',
+  timeout: 1000, // defaults to 20s
+  payload: {
+    username: 'marcopeg',
+  },
+});
+
+workflow.run()
+  .then(res => console.log('Workflow completed:', res))
+  .catch(err => console.error('Workflow exited:', err));
+```
+
+Basically a workflow is a big promise that wraps the execution of one or more
+workers across your queue processing cluster.
+
+The signup worker may look something like:
+
+```js
+const signupWorker = {
+  queue: 'signup',
+  handler: (doc, { workflow }) => {
+    const { username } = doc.payload;
+
+    // Break the workflow in case of errors:
+    if (username.length < 5) {
+      return workflow.reject('Username too short');
+    }
+
+    // Pipe the document into another queue to
+    // continue the workflow:
+    return workflow.forward('signup_save_user', {
+      payload: { validated: true }
+    });
+  }
+}
+```
+
+You can also nest workflows one into another in order to parallelize the execution
+of tasks:
+
+```js
+const signupWorker = {
+  queue: 'signup_save_user',
+  handler: async (doc, { workflow }) => {
+    const { username } = doc.payload;
+
+    // Persist the user into the database
+    let userRecord = null;
+    try {
+      userRecord = await db.saveUser(username)
+    } catch (err) {
+      return workflow.reject(err)
+    }
+
+    // Run a few parallel workflows
+    const w1 = workflow.create({
+      queue: 'signup_send_welcome_email',
+      payload: userRecord,
+    }).run();
+
+    const w2 = workflow.create({
+      queue: 'signup_process_user_icon',
+      payload: userRecord,
+    }).run();
+
+    const w3 = workflow.create({
+      queue: 'signup_fetch_user_profile',
+      payload: userRecord,
+    }).run();
+
+    // The sub-workflows run in parallel and the work is actually distributed
+    // horizontally across your worker's cluster.
+    //
+    // Nevertheless, you can simply await all that work to complete
+    // before completing and releasing the main signup workflow.
+    try {
+      await Promise.all([w1, w2, w3])
+    } catch (err) {
+      return workflow.reject(err);
+    }
+
+    // Finally complete the workflow
+    return workflow.resolve(userRecord);
+  }
+}
+```
 
 
 

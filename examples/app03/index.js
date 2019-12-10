@@ -3,24 +3,63 @@ const fetchq = require('fetchq');
 const fastify = require('fastify');
 const uuid = require('uuid/v1');
 
+/**
+ * Exposes a Fastify server that accepts a POST request
+ * with a "username" property in order to simulate a signup.
+ *
+ * The entire handling of the signup process is delegated to
+ * a FetchQ Workflow, the route handler will simply idle until
+ * the workflow's Promise resolves or rejects.
+ */
+const server = fastify({ logger: false });
+server.post('/', async (req, reply) => {
+  try {
+    // Create a workflow that will be executed by one or more
+    // workers, possibly across a number of different machines.
+    const workflow = client.createWorkflow({
+      queue: 'signup',
+      payload: req.body,
+      timeout: 1000, // defaults to 20s
+    })
+
+    // Await for the workflow to finish and send out the result:
+    const workflowResult = await workflow.run();
+    console.log(workflowResult);
+
+    reply.send(workflowResult);
+  } catch (err) {
+    reply.status(500).send(err);
+  }
+});
+
+
+/**
+ * FetchQ Configuration
+ * In this queue client we setup the workflow handlers.
+ *
+ * Each handler performs a single responsability and can perform 3 actions:
+ * - resolve
+ * - reject
+ * - forward
+ *
+ * "Resolve" and "Reject" work pretty much as a promise.
+ * You can pass a valid JSON payload as message and that payload will be
+ * distributed across all connected servers using Postgre's emitter.
+ *
+ * NOTE: `workflow.reject(new Error('xxx'))` won't work!
+ *
+ * "Forward" is a utility method that will push the document into a
+ * different queue aiming to move the workflow forward.
+ */
 const client = fetchq({
   logLevel: 'info',
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 
+  // [OPTIONAL] Create the queues at boot time.
   queues: [
-    {
-      name: 'signup',
-      isActive: true,
-      enableNotifications: true,
-    },
-    {
-      name: 'signup_process',
-      isActive: true,
-      enableNotifications: true,
-    },
-    {
-      name: 'store_users',
-    }
+    { name: 'signup', enableNotifications: true },
+    { name: 'signup_process', enableNotifications: true },
+    { name: 'store_users' },
   ],
 
   workers: [
@@ -28,16 +67,18 @@ const client = fetchq({
     // validates the username and pushes forward
     {
       queue: 'signup',
-      handler: async (doc, { client, workflow }) => {
+      handler: async (doc, { workflow }) => {
         const { username } = doc.payload;
 
         // Apply validation to the username
         if (username.length <= 5) {
-          return workflow.reject('username is too short');
+          return workflow.reject(new Error('username is too short'));
         }
 
         // Push the document forward down the line
-        return workflow.forward('signup_process');
+        return workflow.forward('signup_process', {
+          payload: { foo: 123 },
+        });
       },
     },
     //
@@ -68,32 +109,10 @@ const client = fetchq({
         if (res.queued_docs > 0) {
           return workflow.resolve(payload)
         } else {
-          return workflow.reject(`username "${subject}" exists!`)
+          return workflow.reject(new Error(`username "${subject}" exists!`))
         }
       },
     }],
-});
-
-/**
- * Exposes a Fastify server that accepts a POST request
- * with a "username" property in order to simulate a signup
- */
-const server = fastify({ logger: false });
-server.post('/', async (req, reply) => {
-  try {
-    // Create a workflow that will be executed by one or more
-    // workers, possibly across a number of different machines.
-    const workflow = client.createWorkflow({
-      queue: 'signup',
-      payload: req.body,
-      timeout: 1000,
-    })
-
-    // Await for the workflow to finish and send out the result:
-    reply.send(await workflow.run());
-  } catch (err) {
-    reply.status(500).send(err);
-  }
 });
 
 // Boot
