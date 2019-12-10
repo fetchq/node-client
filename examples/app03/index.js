@@ -9,12 +9,12 @@ const client = fetchq({
 
   queues: [
     {
-      name: 'process_signup',
+      name: 'signup',
       isActive: true,
       enableNotifications: true,
     },
     {
-      name: 'process_signup_id',
+      name: 'signup_process',
       isActive: true,
       enableNotifications: true,
     },
@@ -24,10 +24,10 @@ const client = fetchq({
   ],
 
   workers: [
+    // Process Signup Request:
     // validates the username and pushes forward
     {
-      queue: 'process_signup',
-      lock: '20s',
+      queue: 'signup',
       handler: async (doc, { client, workflow }) => {
         const { username } = doc.payload;
 
@@ -37,12 +37,13 @@ const client = fetchq({
         }
 
         // Push the document forward down the line
-        return workflow.forward('process_signup_id');
+        return workflow.forward('signup_process');
       },
     },
+    //
     // calculates the user's id and tries to save the user.
     {
-      queue: 'process_signup_id',
+      queue: 'signup_process',
       handler: async (doc, { client, workflow }) => {
         // Fetches a payload that is stripped by any workflow
         // related informations.
@@ -83,7 +84,7 @@ server.post('/', async (req, reply) => {
     // Create a workflow that will be executed by one or more
     // workers, possibly across a number of different machines.
     const workflow = client.createWorkflow({
-      queue: 'process_signup',
+      queue: 'signup',
       payload: req.body,
       timeout: 1000,
     })
@@ -99,22 +100,5 @@ server.post('/', async (req, reply) => {
 ;(async () => {
   await client.init();
   await client.start();
-  await server.listen(8080, '::');
-
-  // await new Promise(resolve => setTimeout(resolve, 50));
-
-  // const workflow = client.createWorkflow({
-  //   queue: 'process_signup',
-  //   payload: { username: `foonhiojiojojo`},
-  // });
-
-  // console.log(`Workflow initiated: "${workflow.id}"`)
-
-  // try {
-  //   const res = await workflow.run();
-  //   console.log('RESULT', res);
-  // } catch (err) {
-  //   console.log('WORKFLO EROR', err);
-  // }
-
+  await server.listen(8080);
 })();
