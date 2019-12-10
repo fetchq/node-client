@@ -2,15 +2,16 @@
 
 ## v2.4.0
 
-- add utility function `client.boot()`
-- the `payload` is optional to actions reschedule, complete and kill. If not passed
+- Add utility function `client.boot()`
+- The `payload` is optional to actions reschedule, complete and kill. If not passed
   the document's payload will not be affected
-- the `kill` action can now take a message and produce an error log
-- add the possibility to log an error message for every handler return actions
-- add document's action creators
-- packed document's actions creators into `actions` within the context
-- added `doc.logError(message, [details, refId]` to the document object
-- added `doc.forward(queue, [ payload ])` to the document object
+- The `kill` action can now take a message and produce an error log
+- Add the possibility to log an error message for every handler return actions
+- Add document's action creators
+- Pack document's actions creators into `actions` within the context
+- Add `doc.logError(message, [details, refId]` to the document object
+- Add `doc.forward(queue, [ payload ])` to the document object
+- Implement workflow api (see App03 example!!!)
 
 ## v2.3.0
 
