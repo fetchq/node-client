@@ -55,7 +55,7 @@ const client = fetchq({
       enableNotifications: true,
       workerHandler: async (doc, { client }) => {
         client.logger.info(doc.queue, doc.payload);
-        await doc.forward('q2', { ...doc.payload, q1: true });
+        await doc.forward('q2', { q1: true });
         return doc.drop();
       },
     },
@@ -121,7 +121,6 @@ const client = fetchq({
         // yet another queue for further processing.
         if (doc.iterations >= 3) {
           await doc.forward('q3', {
-            ...doc.payload,
             q2: true,
             iterations: doc.iterations,
           });

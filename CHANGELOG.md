@@ -1,5 +1,9 @@
 # FetchQ NodeJS Client - Changelog
 
+## v2.5.0
+
+- Fix bug when passing `nextIteration` as date object
+
 ## v2.4.0
 
 - Add utility function `client.boot()`
