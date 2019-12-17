@@ -193,14 +193,14 @@ const client = fetchq({
 ## The Worker's Handler Function
 
 ```js
-const handler = async (doc, { client, reschedule }) => {
+const handler = async (doc, { client }) => {
   // use the builtin logger
   client.logger.info(`handling ${doc.queue}::${doc.subject}`);
 
   // append the document into another queue
   await client.doc.append('another-queue', doc.payload);
 
-  return reschedule('+1 week');
+  return doc.reschedule('+1 week');
 };
 ```
 
@@ -212,11 +212,11 @@ names misspell, you can use **action creators** from the handler's context:
 
 ```js
 const handler = (doc, ctx) => {
-  return ctx.reschedule('+1 week');
-  return ctx.reject('error message...');
-  return ctx.complete();
-  return ctx.kill();
-  return ctx.drop();
+  return doc.reschedule('+1 week');
+  return doc.reject('error message...');
+  return doc.complete();
+  return doc.kill();
+  return doc.drop();
 };
 ```
 
