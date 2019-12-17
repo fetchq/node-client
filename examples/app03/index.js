@@ -1,4 +1,4 @@
-console.log('FetchQ Client // Examples // App02')
+console.log('FetchQ Client // Examples // App03')
 const fetchq = require('fetchq');
 const fastify = require('fastify');
 const uuid = require('uuid/v1');
@@ -13,22 +13,23 @@ const uuid = require('uuid/v1');
  */
 const server = fastify({ logger: false });
 server.post('/', async (req, reply) => {
+  // Create a workflow that will be executed by one or more
+  // workers, possibly across a number of different machines.
+  const workflow = client.createWorkflow({
+    queue: 'signup',
+    payload: req.body,
+    timeout: 1000, // defaults to 20s
+  })
+
+  // Await for the workflow to finish and send out the result:
   try {
-    // Create a workflow that will be executed by one or more
-    // workers, possibly across a number of different machines.
-    const workflow = client.createWorkflow({
-      queue: 'signup',
-      payload: req.body,
-      timeout: 1000, // defaults to 20s
-    })
-
-    // Await for the workflow to finish and send out the result:
     const workflowResult = await workflow.run();
-    console.log(workflowResult);
-
     reply.send(workflowResult);
+
+  // Or trace the error from the permanent logs
   } catch (err) {
-    reply.status(500).send(err);
+    const trace = await workflow.trace();
+    reply.status(500).send({ err, trace });
   }
 });
 

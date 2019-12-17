@@ -3,6 +3,8 @@
 ## v2.5.0
 
 - Fix bug when passing `nextIteration` as date object
+- Add `workflow.trace()` utility
+- Add `doc.trace()` utility
 
 ## v2.4.0
 
