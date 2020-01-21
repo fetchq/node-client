@@ -26,7 +26,7 @@ server.post('/', async (req, reply) => {
     const workflowResult = await workflow.run();
     reply.send(workflowResult);
 
-  // Or trace the error from the permanent logs
+    // Or trace the error from the permanent logs
   } catch (err) {
     const trace = await workflow.trace();
     reply.status(500).send({ err, trace });
@@ -56,6 +56,12 @@ const client = fetchq({
   logLevel: 'info',
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 
+  // Try to create a free Postgres database at: https://elephantsql.com
+  // FetchQ will automatically initialize the db on the first run!
+  // ------
+  // connectionString: 'postgres://xxx:yyy@manny.db.elephantsql.com:5432/zzz',
+  // pool: { max: 1 },
+
   // [OPTIONAL] Create the queues at boot time.
   queues: [
     { name: 'signup', enableNotifications: true },
@@ -69,7 +75,7 @@ const client = fetchq({
     {
       queue: 'signup',
       handler: async (doc, { workflow }) => {
-        const { username } = doc.payload;
+        const { username } = doc.payload;
 
         // Apply validation to the username
         if (username.length <= 5) {
@@ -78,7 +84,7 @@ const client = fetchq({
 
         // Push the document forward down the line
         return workflow.forward('signup_process', {
-          payload: { foo: 123 },
+          payload: { foo: 123 },
         });
       },
     },
@@ -90,7 +96,7 @@ const client = fetchq({
         // Fetches a payload that is stripped by any workflow
         // related informations.
         const payload = workflow.getPayload();
-        const { username: subject } = payload;
+        const { username: subject } = payload;
 
         // Fakes to generate a user id:
         // this is just to demonstrate how to add stuff to a document's payload.
@@ -117,7 +123,7 @@ const client = fetchq({
 });
 
 // Boot
-;(async () => {
+; (async () => {
   await client.init();
   await client.start();
   await server.listen(8080);

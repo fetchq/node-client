@@ -1,6 +1,7 @@
 {
   "name": "fetchq",
-  "version": "2.5.0",
+  "version": "2.6.0",
+  "fetchq_version": "2.2.0",
   "description": "FetchqDB Client",
   "main": "index.js",
   "scripts": {
@@ -23,10 +24,10 @@
   "homepage": "https://github.com/marcopeg/fetchq#readme",
   "dependencies": {
     "@marcopeg/utils": "^2.0.1",
-    "pg": "^7.14.0",
+    "pg": "^7.17.1",
     "pg-pubsub": "^0.5.0",
     "serialize-error": "^5.0.0",
-    "uuid": "^3.3.3",
+    "uuid": "^3.4.0",
     "winston": "^2.4.2"
   }
 }

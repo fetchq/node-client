@@ -7,6 +7,12 @@ const client = fetchq({
   logLevel: 'info',
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 
+  // Try to create a free Postgres database at: https://elephantsql.com
+  // FetchQ will automatically initialize the db on the first run!
+  // ------
+  // connectionString: 'postgres://xxx:yyy@manny.db.elephantsql.com:5432/zzz',
+  // pool: { max: 1 },
+
   queues: [
     {
       name: 'process_signup',
@@ -29,7 +35,7 @@ const client = fetchq({
       queue: 'process_signup',
       lock: '20s',
       handler: async (doc, { client }) => {
-        const { username, pipelineId } = doc.payload;
+        const { username, pipelineId } = doc.payload;
 
         // Apply validation to the username
         if (username.length <= 5) {
@@ -51,7 +57,7 @@ const client = fetchq({
     {
       queue: 'process_signup_id',
       handler: async (doc, { client }) => {
-        const { username, pipelineId } = doc.payload;
+        const { username, pipelineId } = doc.payload;
 
         const payload = {
           ...doc.payload,
@@ -72,7 +78,7 @@ const client = fetchq({
         } else {
           message = 'username exists!';
           client.emitPipelineFailed(pipelineId, message);
-          return doc.kill({ message });
+          return doc.kill({ message });
         }
       },
     }],
@@ -105,7 +111,7 @@ server.post('/', async (req, reply) => {
 });
 
 // Boot
-;(async () => {
+; (async () => {
   await client.init();
   await client.start();
   await server.listen(8080, '::');

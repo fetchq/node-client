@@ -6,10 +6,9 @@ const client = fetchq({
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 
   // Try to create a free Postgres database at: https://elephantsql.com
-  // and install FetchQ with the plain SQL installer script!
+  // FetchQ will automatically initialize the db on the first run!
   // ------
   // connectionString: 'postgres://xxx:yyy@manny.db.elephantsql.com:5432/zzz',
-  // skipExtension: true,
   // pool: { max: 1 },
 
   /**
@@ -114,7 +113,7 @@ const client = fetchq({
     {
       queue: 'q2',
       concurrency: 5,
-      handler: async (doc, { client }) => {
+      handler: async (doc, { client }) => {
         client.logger.info(`${doc.queue} (${doc.iterations})`, doc.payload);
 
         // after a few repetition, this document gets re-routed into
@@ -144,15 +143,15 @@ const client = fetchq({
     {
       queue: 'q3',
       lock: '5s',
-      handler: async (doc, { client }) => {
+      handler: async (doc, { client }) => {
         client.logger.info(`${doc.queue} - ${doc.subject}`, doc.payload);
 
         // if the subject begins with a number, the process is finally completed
         if (doc.subject.substr(0, 1) === parseInt(doc.subject.substr(0, 1), 10).toString()) {
           return doc.complete();
 
-        // else we reject the document with a reason that will be logged into
-        // the errors table. the cleanup maintenance will eventually kill the document
+          // else we reject the document with a reason that will be logged into
+          // the errors table. the cleanup maintenance will eventually kill the document
         } else {
           return doc.reject('not a number');
         }
@@ -162,7 +161,7 @@ const client = fetchq({
 });
 
 // Boot
-;(async () => {
+; (async () => {
   await client.init();
   await client.start();
 

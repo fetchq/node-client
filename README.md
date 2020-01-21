@@ -8,21 +8,15 @@ The _FetchQ_ client library gives you a function that returns a configured
 client that implements _FetchQ API_:
 
 ```js
-const fetchq = require('fetchq');
+const fetchq = require("fetchq");
 const client = fetchq();
 ```
 
-**NOTE:** If you installed _FetchQ_ using the plain SQL method, you should pass a
-specifig configuration option `skipExtension: true` that prevents the client from
-interacting with the Postgres extension:
+The only requirement is a running Postgres instance. If FetchQ extension
+does not exits, the client will initialize the database for you.
 
-```js
-const fetchq = require('fetchq');
-const client = fetchq({
-  skipExtension: true,
-  ...
-});
-```
+Any new table will be created under the `fetchq_catalog` schema and all the
+PSQL functions are prefixed as `fetchq_xxx`.
 
 ### Using ENV Variables
 
@@ -45,12 +39,12 @@ You can set the connection's configuration programmatically:
 ```js
 const client = fetchq({
   connect: {
-    user: 'dbuser',
-    host: 'database.server.com',
-    database: 'mydb',
-    password: 'secretpassword',
-    port: 3211,
-  },
+    user: "dbuser",
+    host: "database.server.com",
+    database: "mydb",
+    password: "secretpassword",
+    port: 3211
+  }
 });
 ```
 
@@ -58,7 +52,7 @@ Or you can pass a `connectionString`:
 
 ```js
 const client = fetchq({
-  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
+  connectionString: "postgres://postgres:postgres@localhost:5432/postgres"
 });
 ```
 
@@ -74,6 +68,24 @@ const client = fetchq({
 });
 ```
 
+If you use a free tier database (ex from https://elephantsql.com) your
+connections settings may be limited, so I suggest you set
+`pool { max: 1 }` in such early development phases.
+
+**NOTE:** FetchQ client will setup at least 2 connections, one of them is
+dedicated to the event system, the other os for mornal querying.
+
+### Raw Queries
+
+FetchQ uses the famous library `pg` to connect to the Postgres instance,
+once your client is up and running you can issue raw queries as:
+
+```js
+await client.pool.query("SELECT NOW()");
+```
+
+https://node-postgres.com/features/queries
+
 ## Configure Queues
 
 ```js
@@ -81,7 +93,7 @@ const client = fetchq({
   queues: [
     {
       // name of the queue, used later on to interact with it
-      name: 'q1',
+      name: "q1",
 
       // when false, any active worker will pause
       isActive: true,
@@ -93,25 +105,25 @@ const client = fetchq({
       maxAttempts: 5,
 
       // max log duration in a per-queue errors table
-      errorsRetention: '24h',
+      errorsRetention: "24h",
 
       // settings of the per-queue maintenance jobs
       maintenance: {
         // document status maintenance
-        mnt: { delay: '1m', duration: '5m', limit: 500 },
+        mnt: { delay: "1m", duration: "5m", limit: 500 },
 
         // queue stats screenshots for plotting perfomances through time
-        sts: { delay: '1m', duration: '5m' },
+        sts: { delay: "1m", duration: "5m" },
 
         // computed stats job
-        cmp: { delay: '1m', duration: '5m' }, // ???
+        cmp: { delay: "1m", duration: "5m" }, // ???
 
         // errors and metrics cleanup job
-        drp: { delay: '1m', duration: '5m' },
-      },
+        drp: { delay: "1m", duration: "5m" }
+      }
     }
   ]
-})
+});
 ```
 
 ### enableNotifications
@@ -156,8 +168,8 @@ few minutes to keep your database lighter.
 const client = fetchq({
   workers: [
     {
-      queue: 'q2',
-      name: 'my-first-worker',
+      queue: "q2",
+      name: "my-first-worker",
 
       // how many concurrent service instances to run.
       // this is not parallel execution, just concurrent. It will speed up a lot
@@ -174,7 +186,7 @@ const client = fetchq({
       // esitmated max duration of a batch operation.
       // if the worker doesn't complete within this timeframe, the document
       // will considered rejected and cumulates errors
-      lock: '5m',
+      lock: "5m",
 
       // idle time between documents execution
       delay: 250,
@@ -184,10 +196,10 @@ const client = fetchq({
 
       // the function that handles a document
       // see next chapter
-      handler: () => {},
+      handler: () => {}
     }
   ]
-})
+});
 ```
 
 ## The Worker's Handler Function
@@ -198,9 +210,9 @@ const handler = async (doc, { client }) => {
   client.logger.info(`handling ${doc.queue}::${doc.subject}`);
 
   // append the document into another queue
-  await client.doc.append('another-queue', doc.payload);
+  await client.doc.append("another-queue", doc.payload);
 
-  return doc.reschedule('+1 week');
+  return doc.reschedule("+1 week");
 };
 ```
 
@@ -212,8 +224,8 @@ names misspell, you can use **action creators** from the handler's context:
 
 ```js
 const handler = (doc, ctx) => {
-  return doc.reschedule('+1 week');
-  return doc.reject('error message...');
+  return doc.reschedule("+1 week");
+  return doc.reject("error message...");
   return doc.complete();
   return doc.kill();
   return doc.drop();
@@ -224,14 +236,14 @@ All action creators take a second argument as an _options object_ that you can u
 to modify the document's payload or to produce an error log along with the action:
 
 ```js
-reschedule('+1 week', {
+reschedule("+1 week", {
   // mutate the document's payload
-  payload: { ...doc.payload, newField: 'hoho' },
+  payload: { ...doc.payload, newField: "hoho" },
 
   // write a custom error_log
-  message: 'yes, do it again',
-  details: { count: 22 },
-  refId: 'I really forgot why I added this field to the schema...',
+  message: "yes, do it again",
+  details: { count: 22 },
+  refId: "I really forgot why I added this field to the schema..."
 });
 ```
 
@@ -265,8 +277,8 @@ const client = fetchq({
   maintenance: {
     limit: 3,
     delay: 250,
-    sleep: 5000,
-  },
+    sleep: 5000
+  }
 });
 ```
 
@@ -336,16 +348,17 @@ and ejnoy the isolation and horizontal scalability of a queue system!
 
 ```js
 const workflow = client.createWorkflow({
-  queue: 'signup',
+  queue: "signup",
   timeout: 1000, // defaults to 20s
   payload: {
-    username: 'marcopeg',
-  },
+    username: "marcopeg"
+  }
 });
 
-workflow.run()
-  .then(res => console.log('Workflow completed:', res))
-  .catch(err => console.error('Workflow exited:', err));
+workflow
+  .run()
+  .then(res => console.log("Workflow completed:", res))
+  .catch(err => console.error("Workflow exited:", err));
 ```
 
 Basically a workflow is a big promise that wraps the execution of one or more
@@ -355,22 +368,22 @@ The signup worker may look something like:
 
 ```js
 const signupWorker = {
-  queue: 'signup',
+  queue: "signup",
   handler: (doc, { workflow }) => {
     const { username } = doc.payload;
 
     // Break the workflow in case of errors:
     if (username.length < 5) {
-      return workflow.reject('Username too short');
+      return workflow.reject("Username too short");
     }
 
     // Pipe the document into another queue to
     // continue the workflow:
-    return workflow.forward('signup_save_user', {
+    return workflow.forward("signup_save_user", {
       payload: { validated: true }
     });
   }
-}
+};
 ```
 
 You can also nest workflows one into another in order to parallelize the execution
@@ -378,33 +391,39 @@ of tasks:
 
 ```js
 const signupWorker = {
-  queue: 'signup_save_user',
+  queue: "signup_save_user",
   handler: async (doc, { workflow }) => {
     const { username } = doc.payload;
 
     // Persist the user into the database
     let userRecord = null;
     try {
-      userRecord = await db.saveUser(username)
+      userRecord = await db.saveUser(username);
     } catch (err) {
-      return workflow.reject(err)
+      return workflow.reject(err);
     }
 
     // Run a few parallel workflows
-    const w1 = workflow.create({
-      queue: 'signup_send_welcome_email',
-      payload: userRecord,
-    }).run();
+    const w1 = workflow
+      .create({
+        queue: "signup_send_welcome_email",
+        payload: userRecord
+      })
+      .run();
 
-    const w2 = workflow.create({
-      queue: 'signup_process_user_icon',
-      payload: userRecord,
-    }).run();
+    const w2 = workflow
+      .create({
+        queue: "signup_process_user_icon",
+        payload: userRecord
+      })
+      .run();
 
-    const w3 = workflow.create({
-      queue: 'signup_fetch_user_profile',
-      payload: userRecord,
-    }).run();
+    const w3 = workflow
+      .create({
+        queue: "signup_fetch_user_profile",
+        payload: userRecord
+      })
+      .run();
 
     // The sub-workflows run in parallel and the work is actually distributed
     // horizontally across your worker's cluster.
@@ -412,7 +431,7 @@ const signupWorker = {
     // Nevertheless, you can simply await all that work to complete
     // before completing and releasing the main signup workflow.
     try {
-      await Promise.all([w1, w2, w3])
+      await Promise.all([w1, w2, w3]);
     } catch (err) {
       return workflow.reject(err);
     }
@@ -420,10 +439,5 @@ const signupWorker = {
     // Finally complete the workflow
     return workflow.resolve(userRecord);
   }
-}
+};
 ```
-
-
-
-
-
