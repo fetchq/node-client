@@ -1,1 +1,5 @@
 examples
+.editorconfig
+CHANGELOG.md
+IDEAS.md
+Makefile
