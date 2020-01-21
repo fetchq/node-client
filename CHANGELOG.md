@@ -1,5 +1,9 @@
 # FetchQ NodeJS Client - Changelog
 
+## v2.6.1
+
+- pg-sub honors `process.env.PGSTRING`
+
 ## v2.6.0
 
 - Auto inizialize an empty Postgres instance
