@@ -1,6 +1,6 @@
 {
   "name": "fetchq",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "fetchq_version": "2.2.0",
   "description": "FetchqDB Client",
   "main": "index.js",
