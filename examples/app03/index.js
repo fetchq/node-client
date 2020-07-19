@@ -82,6 +82,12 @@ const client = fetchq({
       handler: async (doc, { workflow }) => {
         const { username } = doc.payload;
 
+        // Apply validation to the payload schema
+        // (very sily way to do it)
+        if (!username) {
+          return workflow.reject(new Error('please provide a "username"'));
+        }
+
         // Apply validation to the username
         if (username.length <= 5) {
           return workflow.reject(new Error('username is too short'));

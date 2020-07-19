@@ -43,6 +43,14 @@ const client = fetchq({
       handler: async (doc, { client }) => {
         const { username, pipelineId } = doc.payload;
 
+        // Apply validation to the payload schema
+        // (very sily way to do it)
+        if (!username) {
+          const message = 'please provide a "username"';
+          await client.emitPipelineFailed(pipelineId, message);
+          return doc.kill(message);
+        }
+
         // Apply validation to the username
         if (username.length <= 5) {
           const message = 'username is too short';
