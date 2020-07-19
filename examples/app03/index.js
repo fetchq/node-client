@@ -1,7 +1,13 @@
-console.log('FetchQ Client // Examples // App03')
 const fetchq = require('fetchq');
 const fastify = require('fastify');
 const uuid = require('uuid/v1');
+
+const connectionString =
+  process.env.DATABASE_URL ||
+  'postgres://postgres:postgres@localhost:5432/postgres';
+
+console.log('FetchQ Client // Examples // App03');
+console.log('connecting to: ', connectionString);
 
 /**
  * Exposes a Fastify server that accepts a POST request
@@ -19,7 +25,7 @@ server.post('/', async (req, reply) => {
     queue: 'signup',
     payload: req.body,
     timeout: 1000, // defaults to 20s
-  })
+  });
 
   // Await for the workflow to finish and send out the result:
   try {
@@ -32,7 +38,6 @@ server.post('/', async (req, reply) => {
     reply.status(500).send({ err, trace });
   }
 });
-
 
 /**
  * FetchQ Configuration
@@ -54,7 +59,7 @@ server.post('/', async (req, reply) => {
  */
 const client = fetchq({
   logLevel: 'info',
-  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
+  connectionString,
 
   // Try to create a free Postgres database at: https://elephantsql.com
   // FetchQ will automatically initialize the db on the first run!
@@ -114,16 +119,17 @@ const client = fetchq({
 
         // emit a signal based on the signup result:
         if (res.queued_docs > 0) {
-          return workflow.resolve(payload)
+          return workflow.resolve(payload);
         } else {
-          return workflow.reject(new Error(`username "${subject}" exists!`))
+          return workflow.reject(new Error(`username "${subject}" exists!`));
         }
       },
-    }],
+    },
+  ],
 });
 
 // Boot
-; (async () => {
+(async () => {
   await client.init();
   await client.start();
   await server.listen(8080);
