@@ -1,11 +1,17 @@
-console.log('FetchQ Client // Examples // App02')
 const fetchq = require('fetchq');
 const fastify = require('fastify');
 const uuid = require('uuid/v1');
 
+const connectionString =
+  process.env.DATABASE_URL ||
+  'postgres://postgres:postgres@localhost:5432/postgres';
+
+console.log('FetchQ Client // Examples // App02');
+console.log('connecting to: ', connectionString);
+
 const client = fetchq({
   logLevel: 'info',
-  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
+  connectionString,
 
   // Try to create a free Postgres database at: https://elephantsql.com
   // FetchQ will automatically initialize the db on the first run!
@@ -26,7 +32,7 @@ const client = fetchq({
     },
     {
       name: 'store_users',
-    }
+    },
   ],
 
   workers: [
@@ -62,7 +68,7 @@ const client = fetchq({
         const payload = {
           ...doc.payload,
           id: uuid(),
-        }
+        };
 
         // store the username in a unique table:
         // (this simulates a real user storage table)
@@ -81,7 +87,8 @@ const client = fetchq({
           return doc.kill({ message });
         }
       },
-    }],
+    },
+  ],
 });
 
 /**
@@ -111,7 +118,7 @@ server.post('/', async (req, reply) => {
 });
 
 // Boot
-; (async () => {
+(async () => {
   await client.init();
   await client.start();
   await server.listen(8080, '::');

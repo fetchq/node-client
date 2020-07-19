@@ -1,9 +1,15 @@
-console.log('FetchQ Client // Examples // App01')
 const fetchq = require('fetchq');
+
+const connectionString =
+  process.env.DATABASE_URL ||
+  'postgres://postgres:postgres@localhost:5432/postgres';
+
+console.log('FetchQ Client // Examples // App01');
+console.log('connecting to: ', connectionString);
 
 const client = fetchq({
   logLevel: 'info',
-  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
+  connectionString,
 
   // Try to create a free Postgres database at: https://elephantsql.com
   // FetchQ will automatically initialize the db on the first run!
@@ -147,7 +153,10 @@ const client = fetchq({
         client.logger.info(`${doc.queue} - ${doc.subject}`, doc.payload);
 
         // if the subject begins with a number, the process is finally completed
-        if (doc.subject.substr(0, 1) === parseInt(doc.subject.substr(0, 1), 10).toString()) {
+        if (
+          doc.subject.substr(0, 1) ===
+          parseInt(doc.subject.substr(0, 1), 10).toString()
+        ) {
           return doc.complete();
 
           // else we reject the document with a reason that will be logged into
@@ -155,19 +164,19 @@ const client = fetchq({
         } else {
           return doc.reject('not a number');
         }
-      }
+      },
     },
   ],
 });
 
 // Boot
-; (async () => {
+(async () => {
   await client.init();
   await client.start();
 
   // Push random items into the queue
   setInterval(() => {
+    console.log('>> Append');
     client.doc.append('q1', { foo: 123 });
-  }, 2500)
-
+  }, 2500);
 })();
