@@ -15,7 +15,7 @@ const client = fetchq({
   // FetchQ will automatically initialize the db on the first run!
   // ------
   // connectionString: 'postgres://xxx:yyy@manny.db.elephantsql.com:5432/zzz',
-  // pool: { max: 1 },
+  pool: { max: 1 },
 
   /**
    * Maintenance
@@ -175,7 +175,7 @@ const client = fetchq({
   await client.start();
 
   // Push random items into the queue
-  setInterval(() => {
+  setTimeout(() => {
     console.log('>> Append');
     client.doc.append('q1', { foo: 123 });
   }, 2500);

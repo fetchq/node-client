@@ -1,6 +1,6 @@
 {
   "name": "fetchq",
-  "version": "2.6.3",
+  "version": "2.6.4",
   "fetchq_version": "2.2.0",
   "description": "FetchqDB Client",
   "main": "index.js",
@@ -25,7 +25,7 @@
   "dependencies": {
     "@marcopeg/utils": "^2.0.1",
     "pg": "^8.3.0",
-    "pg-pubsub": "^0.5.0",
+    "@fetchq/pg-pubsub": "^0.6.0",
     "serialize-error": "^5.0.0",
     "uuid": "^8.2.0",
     "winston": "^2.4.2"
