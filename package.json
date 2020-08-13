@@ -1,11 +1,15 @@
 {
   "name": "fetchq",
   "version": "2.6.4",
-  "fetchq_version": "2.2.0",
+  "fetchq_version": "2.3.0",
   "description": "FetchqDB Client",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --testTimeout=10000",
+    "test:unit": "./node_modules/.bin/jest --projects test/unit",
+    "tdd:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --watchAll --testTimeout=10000",
+    "tdd:unit": "jest --projects test/unit --watchAll"
   },
   "repository": {
     "type": "git",
@@ -29,5 +33,9 @@
     "serialize-error": "^5.0.0",
     "uuid": "^8.2.0",
     "winston": "^2.4.2"
+  },
+  "devDependencies": {
+    "envalid": "^6.0.2",
+    "jest": "^26.4.0"
   }
 }
