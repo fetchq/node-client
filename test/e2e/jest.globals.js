@@ -5,15 +5,23 @@ const connectionString = env.PGSTRING;
 
 const pause = (delay = 0) => new Promise(r => setTimeout(r, delay));
 
-const resetFetchq = async () => {
-  const pool = new Pool({
+const resetFetchq = (fq, config = {}) => async () => {
+  const client = await fq({
     connectionString,
-    max: 1,
-  });
-  await pool.query('drop schema if exists fetchq_catalog cascade;');
-  await pool.query('drop schema if exists public cascade;');
-  await pool.query('create schema if not exists public;');
-  await pool.end();
+    pool: { max: 1 },
+    ...config,
+  }).boot();
+
+  await client.utils.reset();
+  await client.end();
+  // const pool = new Pool({
+  //   connectionString,
+  //   max: 1,
+  // });
+  // await pool.query('drop schema if exists fetchq_catalog cascade;');
+  // await pool.query('drop schema if exists public cascade;');
+  // await pool.query('create schema if not exists public;');
+  // await pool.end();
 };
 
 const makeClient = (fq, config = {}) =>

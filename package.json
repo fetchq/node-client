@@ -1,14 +1,14 @@
 {
   "name": "fetchq",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "fetchq_version": "2.2.0",
   "description": "FetchqDB Client",
   "main": "index.js",
   "scripts": {
     "test": "npm run test:unit && npm run test:e2e",
-    "test:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --testTimeout=10000",
+    "test:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --testTimeout=15000",
     "test:unit": "./node_modules/.bin/jest --projects test/unit",
-    "tdd:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --watchAll --testTimeout=10000",
+    "tdd:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --watchAll --testTimeout=15000",
     "tdd:unit": "jest --projects test/unit --watchAll"
   },
   "repository": {

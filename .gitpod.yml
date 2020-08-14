@@ -1,5 +1,22 @@
 image: marcopeg/gitpod-workspace-postgres:2.5.0
 
+tasks:
+  - name: Utility
+    init: rm -rf ./.gitpod.lock && npm i && touch ./.gitpod.lock
+    command: echo "Hello Fetchq :-)"
+    openIn: bottom
+    openMode: tab-before
+  - name: Unit Tests
+    init: echo "Awaiting NPM install..." && while ! find ./.gitpod.lock 2> /dev/null 1> /dev/null; do sleep 5; done
+    command: yarn tdd:unit
+    openIn: right
+    openMode: tab-after
+  - name: E2E Tests
+    init: echo "Awaiting NPM install..." && while ! find ./.gitpod.lock 2> /dev/null 1> /dev/null; do sleep 5; done
+    command: yarn tdd:e2e
+    openIn: right
+    openMode: tab-after
+
 ports:
   - port: 8008
     onOpen: ignore
