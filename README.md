@@ -8,7 +8,7 @@ The _FetchQ_ client library gives you a function that returns a configured
 client that implements _FetchQ API_:
 
 ```js
-const fetchq = require("fetchq");
+const fetchq = require('fetchq');
 const client = fetchq();
 ```
 
@@ -39,12 +39,12 @@ You can set the connection's configuration programmatically:
 ```js
 const client = fetchq({
   connect: {
-    user: "dbuser",
-    host: "database.server.com",
-    database: "mydb",
-    password: "secretpassword",
-    port: 3211
-  }
+    user: 'dbuser',
+    host: 'database.server.com',
+    database: 'mydb',
+    password: 'secretpassword',
+    port: 3211,
+  },
 });
 ```
 
@@ -52,7 +52,7 @@ Or you can pass a `connectionString`:
 
 ```js
 const client = fetchq({
-  connectionString: "postgres://postgres:postgres@localhost:5432/postgres"
+  connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 });
 ```
 
@@ -81,7 +81,7 @@ FetchQ uses the famous library `pg` to connect to the Postgres instance,
 once your client is up and running you can issue raw queries as:
 
 ```js
-await client.pool.query("SELECT NOW()");
+await client.pool.query('SELECT NOW()');
 ```
 
 https://node-postgres.com/features/queries
@@ -93,7 +93,7 @@ const client = fetchq({
   queues: [
     {
       // name of the queue, used later on to interact with it
-      name: "q1",
+      name: 'q1',
 
       // when false, any active worker will pause
       isActive: true,
@@ -105,24 +105,24 @@ const client = fetchq({
       maxAttempts: 5,
 
       // max log duration in a per-queue errors table
-      errorsRetention: "24h",
+      errorsRetention: '24h',
 
       // settings of the per-queue maintenance jobs
       maintenance: {
         // document status maintenance
-        mnt: { delay: "1m", duration: "5m", limit: 500 },
+        mnt: { delay: '1m', duration: '5m', limit: 500 },
 
         // queue stats screenshots for plotting perfomances through time
-        sts: { delay: "1m", duration: "5m" },
+        sts: { delay: '1m', duration: '5m' },
 
         // computed stats job
-        cmp: { delay: "1m", duration: "5m" }, // ???
+        cmp: { delay: '1m', duration: '5m' }, // ???
 
         // errors and metrics cleanup job
-        drp: { delay: "1m", duration: "5m" }
-      }
-    }
-  ]
+        drp: { delay: '1m', duration: '5m' },
+      },
+    },
+  ],
 });
 ```
 
@@ -168,8 +168,8 @@ few minutes to keep your database lighter.
 const client = fetchq({
   workers: [
     {
-      queue: "q2",
-      name: "my-first-worker",
+      queue: 'q2',
+      name: 'my-first-worker',
 
       // how many concurrent service instances to run.
       // this is not parallel execution, just concurrent. It will speed up a lot
@@ -186,7 +186,7 @@ const client = fetchq({
       // esitmated max duration of a batch operation.
       // if the worker doesn't complete within this timeframe, the document
       // will considered rejected and cumulates errors
-      lock: "5m",
+      lock: '5m',
 
       // idle time between documents execution
       delay: 250,
@@ -196,79 +196,232 @@ const client = fetchq({
 
       // the function that handles a document
       // see next chapter
-      handler: () => {}
-    }
-  ]
+      handler: () => {},
+    },
+  ],
 });
 ```
 
 ## The Worker's Handler Function
 
+The worker's handler is an **asynchronous function** that is triggered
+by the Fetchq client any time a document is ready for execution.
+
+> **You can focus on "what to do on a single document"** and let Fetchq
+> deal with the complexity of applying it to millions of them, within
+> a single machine, or spread across a cluster of workers.
+
+It receives a `document` which is a
+Javascript object and should return an `action` (inspired by Redux) which
+is another object that describes how Fetchq should handle the document
+itself, after our custom logic is completed.
+
 ```js
-const handler = async (doc, { client }) => {
+const handler = async (doc, ctx) => {
   // use the builtin logger
   client.logger.info(`handling ${doc.queue}::${doc.subject}`);
 
-  // append the document into another queue
-  await client.doc.append("another-queue", doc.payload);
+  // forward the document into another queue, with the
+  // possibility of simple payload decoration:
+  await doc.forward('another-queue', {
+    decorate: 'the payload',
+  });
 
-  return doc.reschedule("+1 week");
+  // Run a custom SQL query
+  await ctx.client.pool.query(`SELECT NOW()`);
+
+  // Use an `action creator` to describe how you expect Fetchq
+  // to handle the document after the custom logic completes.
+  return doc.reschedule('+1 week');
 };
 ```
+
+**👉 It's important to understand that Fetchq's handler execution is statefull**:  
+during the execution of a handler you can take decision based on
+previous executions, leveraging on the internal properties, or
+manipulating the document's payload.
+
+#### The DOC parameter
+
+The `document` parameter (first in order) contains relevant information for the logical
+execution of the worker function:
+
+| name           | type   | description                                                                                                                                           |
+| -------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| queue          | string | Document's queue name                                                                                                                                 |
+| subject        | string |  Document's unique identifier in the queue                                                                                                            |
+| payload        | object |  Document's custom data object <small>(stored as jsonb)</small>                                                                                       |
+| version        | number | Document's version number <br /><small>describes the payload's signature</small>                                                                      |
+| iterations     | number | Successfully processed counter                                                                                                                        |
+| attempts       | number | Failed processed counter <br /><small>gets reset after a successful execution</small>                                                                 |
+| created_at     | date   | Document's first appeareance in the queue                                                                                                             |
+| last_iteration | date   | Document's last attempted processing date <br /><small>could be null</small>                                                                          |
+| next_iteration | date   | Document's next planned processing date <br /><small>Used in case of unhandled exception, could be modified by the `doc.reschedule()` method.</small> |
+
+### The CTX parameter
+
+The `context` parameter gives you access to APIs that are not strictly
+related to the document under execution.
+
+| name     | type   | description                                                                                                      |
+| -------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| client   | ref    | Memory reference to the Fetchq's client instance<br /><small>it give you full access to the client's API</small> |
+| worker   | ref    | Memory reference to the Worker's instance                                                                        |
+| workflow | object | Worflow API<br /><small><b>experimental feature</b></small>                                                      |
+
+> **NOTE:** You can freely extend the context that is given to
+> any handlers by using the `client.decorateContext()` API or the
+> `decorateContext` setting. Read more under `handler context decoration`
+> paragraph.
 
 ## Returning Actions
 
 The handler function should return an object that defines which action should be
 performed on the document. In order to facilitate this activity and avoid actions
-names misspell, you can use **action creators** from the handler's context:
+names misspell, you can use **action creators** from the `document` object:
 
 ```js
 const handler = (doc, ctx) => {
-  return doc.reschedule("+1 week");
-  return doc.reject("error message...");
+  return doc.reschedule('+1 week');
+  return doc.reject('error message...');
   return doc.complete();
   return doc.kill();
   return doc.drop();
 };
 ```
 
-All action creators take a second argument as an _options object_ that you can use
-to modify the document's payload or to produce an error log along with the action:
+### reschedule(nextIteration, [options])
+
+The document will be scheduled for further execution.
+
+You should provide a
+`nextIteration` option that could be a Javascript Date object or a valid
+Postgres interval string such: `+ 1 minute`, `-20y`, ...
 
 ```js
-reschedule("+1 week", {
-  // mutate the document's payload
-  payload: { ...doc.payload, newField: "hoho" },
+return doc.reschedule('+1 week', {
+  // decorate the document's payload
+  payload: { ...doc.payload, newField: 'hoho' },
 
-  // write a custom error_log
-  message: "yes, do it again",
+  // write a custom persistent log while rescheduling
+  refId: 'custom reference',
+  message: 'yes, do it again',
   details: { count: 22 },
-  refId: "I really forgot why I added this field to the schema..."
 });
 ```
 
-### reschedule(nextIteration, [options])
+### drop([options])
 
-The document will be scheduled for another execution. You should provide a
-`nextIteration` option that could be a Javascript Date object or a valid
-Postgres interval string such `+ 1 minute`, `-20y`, ...
+The document will be deleted from the queue's table.
 
-### reject(errorMessage, [options])
+```js
+return doc.drop({
+  // write a custom persistent log before droppint the document
+  refId: 'custom reference',
+  message: 'dropped a document',
+  details: doc,
+});
+```
 
-The document will be scheduled for another execution attempt according to the queue's
-settings and lock duration.
+> **NOTE:** That means that the same `subject` can be re-queued
+> by a `doc.push()` action.
 
 ### complete([options])
 
 The document will be marked with a `status = 3` and will never be executed again.
 
+```js
+return doc.complete({
+  // decorate the document's payload
+  payload: { ...doc.payload, newField: 'hoho' },
+
+  // write a custom persistent log before marking the document as complete
+  refId: 'custom reference',
+  message: 'there was no more stuff to do',
+  details: { count: 22 },
+});
+```
+
+> **NOTE:** Because the document itself is retained by the queue's
+> table, any attempt to `doc.push()` it back into the queue will
+> silently fail, returning a `queued_docs = 0`.
+
 ### kill([options])
 
 The document will be marked with a `status = -1` and will never be executed again.
 
-### drop([options])
+```js
+return doc.kill({
+  // decorate the document's payload
+  payload: { ...doc.payload, newField: 'hoho' },
 
-The document will be deleted from the queue's table.
+  // write a custom persistent log before marking the document as complete
+  refId: 'custom reference',
+  message: 'there was NOTHING ELSE to do',
+  details: { count: 22 },
+});
+```
+
+> **NOTE:** Because the document itself is retained by the queue's
+> table, any attempt to `doc.push()` it back into the queue will
+> silently fail, returning a `queued_docs = 0`.
+
+### reject(errorMessage, [options])
+
+The document will be scheduled for another execution attempt according to the queue's
+settings and lock duration. The `attempts` counter will increase by
+one unit, and if it exceeds the `maxAttempts` threshold as set for the queue,
+it will be automatically killed (mark as `status = -1`).
+
+You normally use this API within a `catch (err) {}` statement, when
+you have a clear idea of what went wrong, and want to customize the error log.
+
+```js
+return doc.reject('I know exactly what went wrong', {
+  // Add details to the log error message
+  refId: 'custom reference',
+  details: { count: 22 },
+});
+```
+
+> **NOTE:** Any unhandled exception that may happen within the handler's
+> function is considered an **implicit rejection** and an error log is
+> automatically appended to the queue's logs.
+
+## Handler's Context Decoration
+
+More often than not your workers' handlers need to deal with external
+API or other parts of your application.
+
+Fetchq encourages you to think your handlers as **pure functions** to
+simplify Unit Testing and avoid the most common side effects based bugs.
+
+A common solution is to provide a custom set of capabilities to your
+handlers while configuring the Fetchq instance:
+
+```js
+fetchq({
+  decorateContext: {
+    faa: 1,
+  },
+  workers: [
+    {
+      queue: 'q1',
+      decorateContext: {
+        foo: 2,
+      },
+      handler: (doc, { faa, foo }) => {
+        console.log(faa, foo);
+        return doc.drop();
+      },
+    },
+  ],
+});
+```
+
+You can apply this settings at client level, injecting custom stuff
+into every worker, or worker-by-worker by providind the setting within
+the worker's configuration.
 
 ## Configure Maintenance
 
@@ -277,8 +430,8 @@ const client = fetchq({
   maintenance: {
     limit: 3,
     delay: 250,
-    sleep: 5000
-  }
+    sleep: 5000,
+  },
 });
 ```
 
@@ -324,7 +477,7 @@ In real life production settings, where you have probably many servers that proc
 the queue, it is a better idea to skip the init as it may end up in
 **boot-time racing conditions**.
 
-I normally implement the `fetchq.init()` method in my main backend service that takes
+I normally implement the `fetchq.init()` method in my **main backend service** that takes
 the lead in configuring the whole system and performs schema migrations.
 
 Any other second level service (such a worker service) should be fail tolerant and
@@ -348,17 +501,17 @@ and ejnoy the isolation and horizontal scalability of a queue system!
 
 ```js
 const workflow = client.createWorkflow({
-  queue: "signup",
+  queue: 'signup',
   timeout: 1000, // defaults to 20s
   payload: {
-    username: "marcopeg"
-  }
+    username: 'marcopeg',
+  },
 });
 
 workflow
   .run()
-  .then(res => console.log("Workflow completed:", res))
-  .catch(err => console.error("Workflow exited:", err));
+  .then((res) => console.log('Workflow completed:', res))
+  .catch((err) => console.error('Workflow exited:', err));
 ```
 
 Basically a workflow is a big promise that wraps the execution of one or more
@@ -368,21 +521,21 @@ The signup worker may look something like:
 
 ```js
 const signupWorker = {
-  queue: "signup",
+  queue: 'signup',
   handler: (doc, { workflow }) => {
     const { username } = doc.payload;
 
     // Break the workflow in case of errors:
     if (username.length < 5) {
-      return workflow.reject("Username too short");
+      return workflow.reject('Username too short');
     }
 
     // Pipe the document into another queue to
     // continue the workflow:
-    return workflow.forward("signup_save_user", {
-      payload: { validated: true }
+    return workflow.forward('signup_save_user', {
+      payload: { validated: true },
     });
-  }
+  },
 };
 ```
 
@@ -391,7 +544,7 @@ of tasks:
 
 ```js
 const signupWorker = {
-  queue: "signup_save_user",
+  queue: 'signup_save_user',
   handler: async (doc, { workflow }) => {
     const { username } = doc.payload;
 
@@ -406,22 +559,22 @@ const signupWorker = {
     // Run a few parallel workflows
     const w1 = workflow
       .create({
-        queue: "signup_send_welcome_email",
-        payload: userRecord
+        queue: 'signup_send_welcome_email',
+        payload: userRecord,
       })
       .run();
 
     const w2 = workflow
       .create({
-        queue: "signup_process_user_icon",
-        payload: userRecord
+        queue: 'signup_process_user_icon',
+        payload: userRecord,
       })
       .run();
 
     const w3 = workflow
       .create({
-        queue: "signup_fetch_user_profile",
-        payload: userRecord
+        queue: 'signup_fetch_user_profile',
+        payload: userRecord,
       })
       .run();
 
@@ -438,6 +591,6 @@ const signupWorker = {
 
     // Finally complete the workflow
     return workflow.resolve(userRecord);
-  }
+  },
 };
 ```

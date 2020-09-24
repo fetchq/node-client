@@ -1,5 +1,10 @@
 # FetchQ NodeJS Client - Changelog
 
+## v2.9.0
+
+- add `decorateContext` to pass custom data and functionalities into the worker's handler function
+- improved documentation
+
 ## v2.6.1
 
 - pg-sub honors `process.env.PGSTRING`
