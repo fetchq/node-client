@@ -1,26 +1,63 @@
-# FetchQ Node Client
+# Fetchq Node Client
 
-Provides a NodeJS interface to manage a FetchQ database instace.
+Provides a NodeJS interface to manage a Fetchq database instace.
+
+> **NOTE:** Fetchq does not solve all the problems in the world.  
+> Before using it, read the following paragraph that explains Fetchq usecase, and take a look at other great alternatives like RabbitMQ or Hangfire.
+
+## What is Fetchq?
+
+You can think of Fetchq as a **big calendar** for running tasks.
+
+With Fetchq, you can push a document into a queue and associate it with a _point in time_, just a date. Could be now, could be a year from now, could be 100 years ago
+
+Fetchq will then try to execute documents that are **due for execution** starting from the older one. Well, it's not really Fetchq that executes it, it's one function that you provide. We call that function a `worker` or a `handler`.
+
+👉 Fetchq guarantees that a document will NOT be executed before it's due date expires.
+
+When your handler executes a document, it can take decision based on the document's data and even on previous execution state.
+
+After your handler does what needs to be done, it can `reschedule`, `drop`, `complete` or `kill` the document. More about this later in the docs.
+
+> **NOTE:** Here you'll learn to use it with NodeJS, but it really is just a smart way to use Postgres and could be paired with any programming language that can connecto to it.
+
+## When to use Fetchq?
+
+You should consider using Fetchq when the answert to either of the following question is true:
+
+- Is FIFO not the best option?
+- Do you need to **reschedule documents** execution?
+- Do you need **uniqueness of documents** in a queue?
+- Do you want to **keep your costs low**? (\*)
+- Do you need/like to **backup/restore** your queues?
+
+(\*) PostgreSQL performs unbelievably well even with very little resources.
+
+## When NOT to use Fetchq?
+
+In case you have a massive amount of work that needs to be taken care by a massive amount of independent workers. In such a case (classic with digital producers such in a IoT project), RabbitMQ or similar alternatives are a much more suitable option.
+
+PostgreSQL can handle a lot of data, easily billions of items in a single queue, and still operate fast enough. Nevertheless, if you go BIG and don't need repetition, uniqueness and planning of tasks, I'd choose a different tool.
 
 ## Configure the Postgres Connection
 
-The _FetchQ_ client library gives you a function that returns a configured
-client that implements _FetchQ API_:
+The _Fetchq_ client library gives you a function that returns a configured
+client that implements _Fetchq API_:
 
 ```js
 const fetchq = require('fetchq');
-const client = fetchq();
+const client = fetchq({ config });
 ```
 
-The only requirement is a running Postgres instance. If FetchQ extension
+The only requirement is a running Postgres instance. If Fetchq extension
 does not exits, the client will initialize the database for you.
 
 Any new table will be created under the `fetchq_catalog` schema and all the
-PSQL functions are prefixed as `fetchq_xxx`.
+PSQL functions are created in the default schema (public) prefixed as `fetchq_xxx` to avoid collisions.
 
 ### Using ENV Variables
 
-By default _FetchQ Client_ tries to **use standard Postgres environment variables**
+By default _Fetchq Client_ tries to **use standard Postgres environment variables**
 to setup the connection, so that you don't have to bother with it programmatically:
 
 - PGUSER
@@ -56,7 +93,7 @@ const client = fetchq({
 });
 ```
 
-### Pooling
+### Connection Pooling
 
 You can read about pooling in the [PG documentation](https://node-postgres.com/features/pooling), if you decide to diverge from the default settings, just pass a
 `pool` option:
@@ -72,12 +109,12 @@ If you use a free tier database (ex from https://elephantsql.com) your
 connections settings may be limited, so I suggest you set
 `pool { max: 1 }` in such early development phases.
 
-**NOTE:** FetchQ client will setup at least 2 connections, one of them is
-dedicated to the event system, the other os for mornal querying.
+> **NOTE:** Fetchq client will setup at least 2 connections, one of them is
+> dedicated to the event system, the other os for normal querying.
 
 ### Raw Queries
 
-FetchQ uses the famous library `pg` to connect to the Postgres instance,
+Fetchq uses the famous library `pg` to connect to the Postgres instance,
 once your client is up and running you can issue raw queries as:
 
 ```js
@@ -88,11 +125,25 @@ https://node-postgres.com/features/queries
 
 ## Configure Queues
 
+A Fetchq queue is represented at database level as a set of tables and entries in some other system tables.
+
+A queue collects:
+
+- documents
+- logs
+- stats
+- settings
+
+You can create as many queues you may need (as long it is sustainable by your db, anyway, it could be in the thousands) representing them as a simple list of configuration objects.
+
+Here is an example that uses all the current default values.
+
 ```js
 const client = fetchq({
   queues: [
     {
       // name of the queue, used later on to interact with it
+      // (must be a valid Postgres table name)
       name: 'q1',
 
       // when false, any active worker will pause
@@ -128,28 +179,28 @@ const client = fetchq({
 
 ### enableNotifications
 
-When this option is set to `true` _FetchQ_ activates triggers and notifications for the
+When this option is set to `true` _Fetchq_ activates triggers and notifications for the
 queue, and the client subscribes to those notifications to wake up after idle time.
 
-**Enable when:**
+**👉 enable when:**
 This is a perfect setting for queues that may stay idle for long periods of time,
 or for queues that must **respond quickly to user's actions**.
 
-**Disable when:**
+**👉 disable when:**
 Queues that need to handle repetitive but not near-real-time critical tasks may
 decide not to use this feature and just rely on simple polling. This has proven to
 be more effective expecially when dealing with massive data into a queue.
 
-### maintenance settings
+### Maintenance Settings
 
 Each queue's health relies on a list of maintenance tasks that must be executed in
-time by each _FetchQ Client_'s maintenance service.
+time by each _Fetchq Client_'s maintenance service.
 
 You can fine tune how often those jobs should be executed and therefore fine tune the
 reactiveness of each queue and the load on the system.
 
 The `mtn` jobs updates the document's status, the faster it goes the more reactive the
-queue when it comes to execute a scheduled document that became pending.
+queue when it comes to execute a scheduled document that became pending. It also increases CPU and I/O so you must find a good balance based on your needs.
 
 The `sts` job takes screenshots of the queue metrics and stores it into a timeserie
 table that you may want to use for plotting chards and visualize the queue's status.
@@ -453,7 +504,7 @@ await client.boot();
 
 that does exactly as the code before.
 
-`client.init` will apply all the provided configuration to the _FetchQ db_:
+`client.init` will apply all the provided configuration to the _Fetchq db_:
 
 - create missing queues
 - apply queue related settings
@@ -468,7 +519,7 @@ that does exactly as the code before.
 
 ## A word on `init()`
 
-The `init()` method is useful to distribute _FetchQ_ configuration programmatically
+The `init()` method is useful to distribute _Fetchq_ configuration programmatically
 and apply it to the database without messing with SQL and Postgres clients.
 
 The entire initialization happens inside a `BEGIN - COMMIT` block so to minimize
@@ -492,7 +543,7 @@ Normally you write all those steps into an asynchronous route handler that will
 consume quite a few resources from your user facing server... That may result into
 an unresponsive or slow website.
 
-With FetchQ Workflow you can free your main process of any computational burden
+With Fetchq Workflow you can free your main process of any computational burden
 and ejnoy the isolation and horizontal scalability of a queue system!
 
 ```js
