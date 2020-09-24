@@ -4,6 +4,8 @@
 
 - add `decorateContext` to pass custom data and functionalities into the worker's handler function
 - improved documentation
+- improve `init()` by running all the upserting within a transaction
+- enableNotifications is `true` by default
 
 ## v2.6.1
 

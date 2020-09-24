@@ -444,7 +444,8 @@ await client.init();
 await client.start();
 ```
 
-or with the shorter version:
+or with the shorter version:  
+<small>(Intended for single processes applications, or for development)</small>
 
 ```js
 await client.boot();
@@ -470,19 +471,14 @@ that does exactly as the code before.
 The `init()` method is useful to distribute _FetchQ_ configuration programmatically
 and apply it to the database without messing with SQL and Postgres clients.
 
-It works exceptionally good during development or when you have only one active
-client.
+The entire initialization happens inside a `BEGIN - COMMIT` block so to minimize
+the risk for racing conditions. Nevertheless, we suggest to minimize the amount of
+clients that run this function.
 
-In real life production settings, where you have probably many servers that process
-the queue, it is a better idea to skip the init as it may end up in
-**boot-time racing conditions**.
-
-I normally implement the `fetchq.init()` method in my **main backend service** that takes
-the lead in configuring the whole system and performs schema migrations.
-
-Any other second level service (such a worker service) should be fail tolerant and
-capable of awaiting for the correct configuration to eventually apply in order to
-start doing its job.
+In a common situation, there shold be just one single process that is
+responsible for running the `init()` API, you can actually think of it
+as some kind of migration as both the basic Fetchq schema and queue definitions are
+upserted at this point in time.
 
 ## Workflow API
 
