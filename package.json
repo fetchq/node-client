@@ -27,9 +27,10 @@
   },
   "homepage": "https://github.com/marcopeg/fetchq#readme",
   "dependencies": {
+    "@fetchq/pg-pubsub": "^0.6.0",
     "@marcopeg/utils": "^2.0.1",
     "pg": "^8.3.0",
-    "@fetchq/pg-pubsub": "^0.6.0",
+    "promise-retry": "^2.0.1",
     "serialize-error": "^5.0.0",
     "uuid": "^8.2.0",
     "winston": "^2.4.2"

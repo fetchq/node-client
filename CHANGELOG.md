@@ -1,5 +1,10 @@
 # FetchQ NodeJS Client - Changelog
 
+## v2.9.1
+
+- connection retry using `promise-retry`
+- deprecated `settings.connect` in favor of `settings.connectionParams`
+
 ## v2.9.0
 
 - add `decorateContext` to pass custom data and functionalities into the worker's handler function

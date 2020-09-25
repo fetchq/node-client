@@ -5,6 +5,8 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 > **NOTE:** Fetchq does not solve all the problems in the world.  
 > Before using it, read the following paragraph that explains Fetchq usecase, and take a look at other great alternatives like RabbitMQ or Hangfire.
 
+---
+
 ## What is Fetchq?
 
 You can think of Fetchq as a **big calendar** for running tasks.
@@ -21,6 +23,8 @@ After your handler does what needs to be done, it can `reschedule`, `drop`, `com
 
 > **NOTE:** Here you'll learn to use it with NodeJS, but it really is just a smart way to use Postgres and could be paired with any programming language that can connecto to it.
 
+---
+
 ## When to use Fetchq?
 
 You should consider using Fetchq when the answert to either of the following question is true:
@@ -33,11 +37,31 @@ You should consider using Fetchq when the answert to either of the following que
 
 (\*) PostgreSQL performs unbelievably well even with very little resources.
 
+---
+
 ## When NOT to use Fetchq?
 
 In case you have a massive amount of work that needs to be taken care by a massive amount of independent workers. In such a case (classic with digital producers such in a IoT project), RabbitMQ or similar alternatives are a much more suitable option.
 
 PostgreSQL can handle a lot of data, easily billions of items in a single queue, and still operate fast enough. Nevertheless, if you go BIG and don't need repetition, uniqueness and planning of tasks, I'd choose a different tool.
+
+---
+
+## Live Demos
+
+Fetchq works on NodeJS and the only external dependency is a connection to a PostgreSQL instance. Such a lightweight requirements make it possible to run **fully working free in-browser demoes** leveraging on [CodeSandbox](https://codesandbox.io/) and [ElephantSQL](https://www.elephantsql.com/).
+
+### Client Demonstration:
+
+- [FIFO](https://codesandbox.io/s/fetchq-fifo-8xjrg)
+- [decorateContext](https://codesandbox.io/s/fetchq-context-kbnd2)
+- [Worflow API](https://codesandbox.io/s/fetchq-workflow-coruu)
+
+### Fetchq as ForrestJS App:
+
+- [Workflow API](https://codesandbox.io/s/service-fastify-fetchq-0by8x?file=/src/feature-home-page.js)
+
+---
 
 ## Configure the Postgres Connection
 
@@ -75,7 +99,7 @@ You can set the connection's configuration programmatically:
 
 ```js
 const client = fetchq({
-  connect: {
+  connectionParams: {
     user: 'dbuser',
     host: 'database.server.com',
     database: 'mydb',
@@ -92,6 +116,22 @@ const client = fetchq({
   connectionString: 'postgres://postgres:postgres@localhost:5432/postgres',
 });
 ```
+
+Fetchq will attempt to connect to your Postgres instance multiple times and you can control this behavior with the
+`connectionRetry` configuration:
+
+```js
+const client = fetchq({
+  connectionRetry: {
+    retries: 30,
+    factor: 1,
+    minTimeout: 1 * 1000,
+    maxTimeout: 30 * 1000,
+  },
+});
+```
+
+👉 More info about the params [here](https://www.npmjs.com/package/promise-retry).
 
 ### Connection Pooling
 
@@ -112,6 +152,8 @@ connections settings may be limited, so I suggest you set
 > **NOTE:** Fetchq client will setup at least 2 connections, one of them is
 > dedicated to the event system, the other os for normal querying.
 
+👉 More info about pooling [here](https://node-postgres.com/features/pooling).
+
 ### Raw Queries
 
 Fetchq uses the famous library `pg` to connect to the Postgres instance,
@@ -121,7 +163,9 @@ once your client is up and running you can issue raw queries as:
 await client.pool.query('SELECT NOW()');
 ```
 
-https://node-postgres.com/features/queries
+👉 More info about raw queries [here](https://node-postgres.com/features/queries).
+
+---
 
 ## Configure Queues
 
@@ -213,6 +257,8 @@ The `drp` job tries to drop data that is not necessary anymore. It removes old e
 logs and metrics. This is not a critical job, but it is definetly good to run it every
 few minutes to keep your database lighter.
 
+---
+
 ## Configure Workers
 
 ```js
@@ -252,6 +298,8 @@ const client = fetchq({
   ],
 });
 ```
+
+---
 
 ## The Worker's Handler Function
 
@@ -325,7 +373,9 @@ related to the document under execution.
 > `decorateContext` setting. Read more under `handler context decoration`
 > paragraph.
 
-## Returning Actions
+---
+
+## Hander's Returning Actions
 
 The handler function should return an object that defines which action should be
 performed on the document. In order to facilitate this activity and avoid actions
@@ -439,6 +489,8 @@ return doc.reject('I know exactly what went wrong', {
 > function is considered an **implicit rejection** and an error log is
 > automatically appended to the queue's logs.
 
+---
+
 ## Handler's Context Decoration
 
 More often than not your workers' handlers need to deal with external
@@ -474,6 +526,8 @@ You can apply this settings at client level, injecting custom stuff
 into every worker, or worker-by-worker by providind the setting within
 the worker's configuration.
 
+---
+
 ## Configure Maintenance
 
 ```js
@@ -485,6 +539,8 @@ const client = fetchq({
   },
 });
 ```
+
+---
 
 ## Initialization & Startup
 
@@ -530,6 +586,8 @@ In a common situation, there shold be just one single process that is
 responsible for running the `init()` API, you can actually think of it
 as some kind of migration as both the basic Fetchq schema and queue definitions are
 upserted at this point in time.
+
+---
 
 ## Workflow API
 
