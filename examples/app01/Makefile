@@ -1,4 +1,6 @@
 run:
+	clear
+	
 	# Destroy previous containers
 	docker stop fetchq-app01 || true
 	docker rm fetchq-app01 || true
@@ -11,5 +13,5 @@ run:
 		postgres
 
 	# Start node
-	# npm link fetchq
-	# node index.js
+	npm link fetchq
+	node index.js

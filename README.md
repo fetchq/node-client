@@ -547,6 +547,7 @@ const client = fetchq({
 A normal boot sequence would be obtained with:
 
 ```js
+await client.connect();
 await client.init();
 await client.start();
 ```
@@ -586,6 +587,24 @@ In a common situation, there shold be just one single process that is
 responsible for running the `init()` API, you can actually think of it
 as some kind of migration as both the basic Fetchq schema and queue definitions are
 upserted at this point in time.
+
+In case of racing conditions, the system will detect the issue and re-attempt the
+initialization (using [promise-retry](https://www.npmjs.com/package/promise-retry)).
+
+You can change the retry configuration editing the setting `initializationRetry`:
+
+```js
+const client = fetchq({
+  initializationRetry: {
+    retries: 30,
+    factor: 1,
+    minTimeout: 1 * 1000,
+    maxTimeout: 30 * 1000,
+  },
+});
+```
+
+👉 More info about the params [here](https://www.npmjs.com/package/promise-retry).
 
 ---
 

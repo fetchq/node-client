@@ -3,6 +3,7 @@
 ## v2.9.1
 
 - connection retry using `promise-retry`
+- initialization retry using `promise-retry` to handle concurrect data structure initialization attempts
 - deprecated `settings.connect` in favor of `settings.connectionParams`
 
 ## v2.9.0
