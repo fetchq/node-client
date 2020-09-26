@@ -26,12 +26,14 @@ const createClient1 = require('./client1');
 const createClient2 = require('./client2');
 const createClient3 = require('./client3');
 
+const logLevel = process.env.LOG_LEVEL || 'info';
+
 const connectionString =
   process.env.DATABASE_URL ||
   'postgres://postgres:postgres@localhost:5432/postgres';
 
 const config = {
-  logLevel: 'info',
+  logLevel,
 
   // https://github.com/fetchq/node-client#configure-the-postgres-connection
   connectionString,

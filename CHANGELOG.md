@@ -8,6 +8,7 @@
 - add `settings.autoStart`
 - add `settings.onReady`
 - add `client.decorateContext`
+- add `skipMaintenance`
 
 ## v2.9.0
 

@@ -1,11 +1,17 @@
 const fetchq = require('fetchq');
 
+const logLevel = process.env.LOG_LEVEL || 'info';
+
 const connectionString =
   process.env.DATABASE_URL ||
   'postgres://postgres:postgres@localhost:5432/postgres';
 
-console.log('FetchQ Client // Examples // App04');
-console.log('connecting to: ', connectionString);
+console.log('');
+console.log('###');
+console.log('### FetchQ Client // Examples // App04');
+console.log('### connecting to: ', connectionString);
+console.log('###');
+console.log('');
 
 /**
  * DEFINE HANDLERS FUNCTIONS
@@ -59,10 +65,13 @@ const onReady = async (client) => {
  */
 
 const client = fetchq({
-  logLevel: 'info',
+  logLevel,
   connectionString,
   decorateContext: {
     foo: 1,
+  },
+  initializationRetry: {
+    retries: 0,
   },
   queues: [
     {

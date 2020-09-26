@@ -11,9 +11,9 @@ module.exports = (config = {}) =>
      * and help improving performances.
      */
     maintenance: {
-      limit: 3,
-      delay: 250,
-      sleep: 5000,
+      limit: 1,
+      delay: 1,
+      sleep: 250,
     },
 
     /**
@@ -104,10 +104,8 @@ module.exports = (config = {}) =>
 
     onReady: async (client) => {
       // Push random items into the queue
-      setTimeout(() => {
-        console.log('>> Append');
-        client.doc.append('q1', { foo: 123 });
-      }, 2500);
+      client.logger.info('>> Append');
+      client.doc.append('q1', { foo: 123 });
     },
 
     autoStart: true,

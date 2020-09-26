@@ -11,11 +11,7 @@ const fetchq = require('fetchq');
 module.exports = (config = {}) =>
   fetchq({
     ...config,
-    maintenance: {
-      limit: 3,
-      delay: 250,
-      sleep: 5000,
-    },
+    skipMaintenance: true,
     workers: [
       {
         queue: 'q3',
