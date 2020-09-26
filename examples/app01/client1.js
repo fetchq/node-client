@@ -109,4 +109,6 @@ module.exports = (config = {}) =>
         client.doc.append('q1', { foo: 123 });
       }, 2500);
     },
+
+    autoStart: true,
   });

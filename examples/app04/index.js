@@ -7,34 +7,79 @@ const connectionString =
 console.log('FetchQ Client // Examples // App04');
 console.log('connecting to: ', connectionString);
 
-fetchq({
+/**
+ * DEFINE HANDLERS FUNCTIONS
+ * those functions should be pure, they should rely entirele on the parameters
+ * that are given into by Fetchq.
+ */
+
+const handler1 = async (doc, { client, foo, faa, fii }) => {
+  client.logger.info('WKR - 1', doc.subject, foo, faa, fii);
+
+  await doc.forward('q2');
+
+  // Combine payload and context to decorate the document's
+  // payload while marking it as completed.
+  return doc.complete({
+    payload: { ...doc.payload, foo, faa, fii },
+  });
+};
+
+const handler2 = async (doc, { client, foo, faa, fii }) => {
+  client.logger.info('WKR 2 -', doc.subject, foo, faa, fii);
+
+  // Combine payload and context to decorate the document's
+  // payload while marking it as completed.
+  return doc.complete({
+    payload: { ...doc.payload, foo, faa, fii },
+  });
+};
+
+const onReady = async (client) => {
+  client.logger.info('Fetchq is ready');
+  const data = await client.doc.append('q1', { fii: 3 });
+  client.logger.info('Appended document', data);
+
+  setTimeout(() => {
+    console.log('Add a worker after the system was launched');
+    client.workers.register({
+      queue: 'q2',
+      handler: handler2,
+      decorateContext: {
+        foo: 5,
+        faa: 6,
+        fii: 7,
+      },
+    });
+  }, 1000);
+};
+
+/**
+ * SETUP THE SYSTEM
+ */
+
+const client = fetchq({
   logLevel: 'info',
   connectionString,
-  queues: [{ name: 'q1' }],
   decorateContext: {
     foo: 1,
   },
+  queues: [
+    {
+      name: 'q1',
+    },
+    { name: 'q2' },
+  ],
   workers: [
     {
       queue: 'q1',
-      decorateContext: {
-        faa: 2,
-      },
-      handler: (doc, { foo, faa, client }) => {
-        client.logger.info(doc.subject, foo, faa);
-
-        // Combine payload and context to decorate the document's
-        // payload while marking it as completed.
-        return doc.complete({
-          payload: { ...doc.payload, foo, faa },
-        });
-      },
+      handler: handler1,
+      decorateContext: { fii: 3 },
     },
   ],
-})
-  .boot()
-  .then(async (client) => {
-    client.logger.info('Fetchq is ready');
-    const data = await client.doc.append('q1', { fii: 3 });
-    client.logger.info('Appended document', data);
-  });
+  onReady,
+});
+
+client.decorateContext({ faa: 2 });
+
+client.boot();

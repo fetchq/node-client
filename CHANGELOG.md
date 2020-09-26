@@ -5,7 +5,9 @@
 - connection retry using `promise-retry`
 - initialization retry using `promise-retry` to handle concurrect data structure initialization attempts
 - deprecated `settings.connect` in favor of `settings.connectionParams`
+- add `settings.autoStart`
 - add `settings.onReady`
+- add `client.decorateContext`
 
 ## v2.9.0
 
