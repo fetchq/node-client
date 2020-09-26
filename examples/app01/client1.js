@@ -4,6 +4,8 @@ module.exports = (config = {}) =>
   fetchq({
     ...config,
 
+    clientName: 'client1',
+
     /**
      * Maintenance
      * ===========

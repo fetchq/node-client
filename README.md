@@ -542,6 +542,10 @@ const client = fetchq({
 
 ---
 
+## Configure the Logger
+
+[[ TO BE COMPLETED ]]
+
 ## Initialization & Startup
 
 A normal boot sequence would be obtained with:

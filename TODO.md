@@ -6,3 +6,4 @@
 - document logger
 - document `client.workers.register`
 - document `client.decorateContext`
+- document `settings.logger`

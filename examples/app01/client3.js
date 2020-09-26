@@ -12,6 +12,7 @@ module.exports = (config = {}) =>
   fetchq({
     ...config,
     skipMaintenance: true,
+    clientName: 'client3',
     workers: [
       {
         queue: 'q3',

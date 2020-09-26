@@ -9,6 +9,7 @@
 - add `settings.onReady`
 - add `client.decorateContext`
 - add `skipMaintenance`
+- add `configure.logger` to completely customize the logging capabilities
 
 ## v2.9.0
 
