@@ -6,9 +6,9 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run test:unit && npm run test:e2e",
-    "test:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --testTimeout=15000",
+    "test:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --testTimeout=5000 --detectOpenHandles",
     "test:unit": "./node_modules/.bin/jest --projects test/unit",
-    "tdd:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --watchAll --testTimeout=15000",
+    "tdd:e2e": "./node_modules/.bin/jest --projects test/e2e --runInBand --watchAll --testTimeout=5000 --detectOpenHandles",
     "tdd:unit": "jest --projects test/unit --watchAll"
   },
   "repository": {
@@ -27,13 +27,12 @@
   },
   "homepage": "https://github.com/marcopeg/fetchq#readme",
   "dependencies": {
-    "@fetchq/pg-pubsub": "^0.6.0",
+    "@fetchq/pg-pubsub": "^0.6.1",
     "@marcopeg/utils": "^2.0.1",
-    "pg": "^8.3.0",
+    "pg": "^8.3.3",
     "promise-retry": "^2.0.1",
     "serialize-error": "^5.0.0",
-    "uuid": "^8.3.0",
-    "winston": "^2.4.2"
+    "uuid": "^8.3.0"
   },
   "devDependencies": {
     "envalid": "^6.0.2",

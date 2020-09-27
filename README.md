@@ -7,6 +7,24 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 
 ---
 
+## Table of Contents
+
+- [What is Fetchq](#what-is-fetchq)
+- [When to use Fetchq?](#when-to-use-fetchq)
+- [When NOT to use Fetchq](#when-not-to-use-fetchq)
+- [Live Demos](#live-demos)
+- [DB Configuration](#db-configuration)
+- [Queues Configuration](#queues-configuration)
+- [Workers Configuration](#workers-configuration)
+- [The Handler Function](#the-handler-function)
+- [Returning Actions](#returning-actions)
+- [Context Decoration](#context-decoration)
+- [Maintenance Configuration](#maintenance-configuration)
+- [Logger Configuration](#logger-configuration)
+- [Initialization & Startup](#initialization--startup)
+- [A word on `init()`](#a-word-on-init)
+- [Workflow API](#workflow-api)
+
 ## What is Fetchq?
 
 You can think of Fetchq as a **big calendar** for running tasks.
@@ -63,7 +81,7 @@ Fetchq works on NodeJS and the only external dependency is a connection to a Pos
 
 ---
 
-## Configure the Postgres Connection
+## DB Configuration
 
 The _Fetchq_ client library gives you a function that returns a configured
 client that implements _Fetchq API_:
@@ -167,7 +185,7 @@ await client.pool.query('SELECT NOW()');
 
 ---
 
-## Configure Queues
+## Queues Configuration
 
 A Fetchq queue is represented at database level as a set of tables and entries in some other system tables.
 
@@ -259,7 +277,7 @@ few minutes to keep your database lighter.
 
 ---
 
-## Configure Workers
+## Workers Configuration
 
 ```js
 const client = fetchq({
@@ -301,7 +319,7 @@ const client = fetchq({
 
 ---
 
-## The Worker's Handler Function
+## The Handler Function
 
 The worker's handler is an **asynchronous function** that is triggered
 by the Fetchq client any time a document is ready for execution.
@@ -375,7 +393,7 @@ related to the document under execution.
 
 ---
 
-## Hander's Returning Actions
+## Returning Actions
 
 The handler function should return an object that defines which action should be
 performed on the document. In order to facilitate this activity and avoid actions
@@ -491,7 +509,7 @@ return doc.reject('I know exactly what went wrong', {
 
 ---
 
-## Handler's Context Decoration
+## Context Decoration
 
 More often than not your workers' handlers need to deal with external
 API or other parts of your application.
@@ -528,7 +546,7 @@ the worker's configuration.
 
 ---
 
-## Configure Maintenance
+## Maintenance Configuration
 
 ```js
 const client = fetchq({
@@ -542,31 +560,46 @@ const client = fetchq({
 
 ---
 
-## Configure the Logger
+## Logger Configuration
 
 [[ TO BE COMPLETED ]]
 
 ## Initialization & Startup
 
-A normal boot sequence would be obtained with:
+The easiest way to run Fetchq is with the `autoStart` setting:
 
 ```js
+fetchq({
+  ...config,
+  autoStart: true,
+  onReady: (client) => client.logger.info('Fetchq is ready'),
+});
+```
+
+In case you want to delay the execution of it, you can use the
+`boot()` function:
+
+```js
+// Create the client instance
+const client = fetchq({ ...config });
+
+// Start the client instance
+client.boot().then((client) => client.logger.info('Fetchq is ready'));
+```
+
+A manual boot sequence would be obtained with:
+
+```js
+const client = fetchq({ ...config });
 await client.connect();
 await client.init();
 await client.start();
+client.logger.info('Fetchq is ready');
 ```
-
-or with the shorter version:  
-<small>(Intended for single processes applications, or for development)</small>
-
-```js
-await client.boot();
-```
-
-that does exactly as the code before.
 
 `client.init` will apply all the provided configuration to the _Fetchq db_:
 
+- instanciate your PostgreSQL instance with Fetchq
 - create missing queues
 - apply queue related settings
 - apply queue related jobs settings
