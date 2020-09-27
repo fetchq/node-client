@@ -18,12 +18,12 @@ console.log('connecting to: ', connectionString);
  * the workflow's Promise resolves or rejects.
  */
 const server = fastify({ logger: false });
-server.post('/', async (req, reply) => {
+server.get('/:username', async (req, reply) => {
   // Create a workflow that will be executed by one or more
   // workers, possibly across a number of different machines.
   const workflow = client.createWorkflow({
     queue: 'signup',
-    payload: req.body,
+    payload: req.params,
     timeout: 1000, // defaults to 20s
   });
 

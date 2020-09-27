@@ -1,13 +1,13 @@
-run:
+cleanup:
+	docker stop fetchq-example-app || true
+	docker rm fetchq-example-app || true
+
+run: cleanup
 	clear
 	
-	# Destroy previous containers
-	docker stop fetchq-app01 || true
-	docker rm fetchq-app01 || true
-
 	# Start Postgres
 	docker run --rm -d \
-		--name fetchq-app01 \
+		--name fetchq-example-app \
 		-p 5432:5432 \
 		-e POSTGRES_PASSWORD=postgres \
 		postgres

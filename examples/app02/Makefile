@@ -4,7 +4,7 @@ cleanup:
 
 run: cleanup
 	clear
-
+	
 	# Start Postgres
 	docker run --rm -d \
 		--name fetchq-example-app \
@@ -13,5 +13,6 @@ run: cleanup
 		postgres
 
 	# Start node
+	npm i
 	npm link fetchq
 	node index.js

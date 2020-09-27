@@ -7,3 +7,5 @@
 - document `client.workers.register`
 - document `client.decorateContext`
 - document `settings.logger`
+- document `utils.checkStatus`
+- document `utils.awaitStatus`

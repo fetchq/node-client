@@ -104,17 +104,17 @@ const client = fetchq({
  * with a "username" property in order to simulate a signup
  */
 const server = fastify({ logger: false });
-server.post('/', async (req, reply) => {
+server.get('/:username', async (req, reply) => {
   try {
     // setup the pipeline name with an optional timeout
-    const pipelineId = `signup-${req.body.username}`;
+    const pipelineId = `signup-${req.params.username}`;
     const pipeline = client.onPipeline(pipelineId, 1000);
 
     // push the document into the pipeline
     // a worker will handle this and process the pipeline
     await client.doc.append('process_signup', {
       pipelineId,
-      ...req.body,
+      ...req.params,
     });
 
     // await for the pipeline to complete before sending out stuff
