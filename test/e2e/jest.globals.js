@@ -37,10 +37,20 @@ const config = {
   },
 };
 
+const getError = async (fn) => {
+  try {
+    await fn();
+    return null;
+  } catch (err) {
+    return err;
+  }
+};
+
 module.exports = () => ({
   env,
   config,
   pause,
   resetFetchq,
   makeClient,
+  getError,
 });
