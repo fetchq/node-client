@@ -562,7 +562,36 @@ const client = fetchq({
 
 ## Logger Configuration
 
-[[ TO BE COMPLETED ]]
+Fetchq comes with a simple logger utility that spits out different levels of informations to the `console`. It is a very minimal implementation of the famous [Winston](https://github.com/winstonjs/winston) library.
+
+### Setting the logLevel
+
+You can provide the value through the environment variable `process.env.LOG_LEVEL` or programmatically via configuration:
+
+```js
+fetchq({
+  logLevel: 'error',
+});
+```
+
+> Fetchq falls back on the level `error` if nothing else is specified.
+
+### Providing a custom logger library
+
+Although the built in logger is ok for development, it's likely that you want to bring your real logging library for production. You can do that while setting up the client:
+
+```js
+const winston = require('winston');
+
+fetchq({
+  logger: {
+    instance: winston.createLogger({
+      level: 'info',
+      // other winston configuration
+    }),
+  },
+});
+```
 
 ## Initialization & Startup
 
