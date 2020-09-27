@@ -9,3 +9,4 @@
 - document `settings.logger`
 - document `utils.checkStatus`
 - document `utils.awaitStatus`
+- document the test environment
