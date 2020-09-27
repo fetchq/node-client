@@ -10,6 +10,7 @@
 - add `client.decorateContext`
 - add `skipMaintenance`
 - add `configure.logger` to completely customize the logging capabilities
+- add `utils.awaitStatus` to monitor a document for getting promoted to a particular status in one or more queues
 
 ## v2.9.0
 
