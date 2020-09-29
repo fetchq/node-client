@@ -1,7 +1,7 @@
 {
   "name": "fetchq",
-  "version": "2.9.1",
-  "fetchq_version": "2.2.0",
+  "version": "3.0.0",
+  "fetchq_version": "3.0.0",
   "description": "FetchqDB Client",
   "main": "index.js",
   "scripts": {

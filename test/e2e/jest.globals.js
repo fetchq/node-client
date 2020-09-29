@@ -11,8 +11,8 @@ const resetFetchq = (fq, config = {}) => async () => {
   });
   try {
     await client.connect();
-    // await client.query('SELECT * FROM fetchq_destroy_with_terrible_consequences();');
-    await client.query('DROP SCHEMA IF EXISTS fetchq_catalog CASCADE;');
+    await client.query('DROP SCHEMA IF EXISTS fetchq CASCADE;');
+    await client.query('DROP SCHEMA IF EXISTS fetchq_data CASCADE;');
     await client.end();
   } catch (err) {
     await client.end();
