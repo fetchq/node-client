@@ -11,11 +11,13 @@ module.exports = (config = {}) =>
      * ===========
      * Each FetchQ client runs maintenance jobs that are meant to groom the queue data
      * and help improving performances.
+     *
+     * The shorted the delay/sleep, the faster the queue, the higher the pressure on
+     * PostgreSQL CPU. Tweak those settings responsibly.
      */
     maintenance: {
-      limit: 1,
-      delay: 1,
-      sleep: 250,
+      delay: 1, // milliseconds
+      sleep: 50, // milliseconds
     },
 
     /**
@@ -45,8 +47,6 @@ module.exports = (config = {}) =>
       // once processed, the document is dropped
       {
         name: 'q1',
-        isActive: true,
-        enableNotifications: true,
       },
       // Q2
       // here we just define the queue and it's settings
@@ -61,12 +61,6 @@ module.exports = (config = {}) =>
       // 10 seconds instead of the default (1m)
       {
         name: 'q2',
-        isActive: true,
-        enableNotifications: true,
-        maintenance: {
-          mnt: { delay: '100ms', duration: '1m', limit: 100 },
-          sts: { delay: '10s', duration: '1m' },
-        },
       },
       // Q3
       // here we just define the queue and it's settings
@@ -77,8 +71,6 @@ module.exports = (config = {}) =>
       // be killed.
       {
         name: 'q3',
-        isActive: true,
-        enableNotifications: true,
         maxAttempts: 1,
       },
     ],

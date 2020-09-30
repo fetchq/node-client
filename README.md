@@ -217,27 +217,32 @@ const client = fetchq({
       // fail tolerance of the queue, before considering a document dead
       maxAttempts: 5,
 
-      // max log duration in a per-queue errors table
+      // max log duration in a per-queue logs table
       errorsRetention: '24h',
 
       // settings of the per-queue maintenance jobs
       maintenance: {
         // document status maintenance
-        mnt: { delay: '1m', duration: '5m', limit: 500 },
+        mnt: { delay: '100mm', duration: '1m', limit: 500 },
 
         // queue stats screenshots for plotting perfomances through time
-        sts: { delay: '1m', duration: '5m' },
+        sts: { delay: '5m', duration: '5m' },
 
         // computed stats job
-        cmp: { delay: '1m', duration: '5m' }, // ???
+        cmp: { delay: '10m', duration: '5m' }, // ???
 
         // errors and metrics cleanup job
-        drp: { delay: '1m', duration: '5m' },
+        drp: { delay: '10m', duration: '5m' },
       },
     },
   ],
 });
 ```
+
+> **NOTE**: the default values are suitable for most use cases so to obtain a responsive
+> queue that is taking metrics snapshot every 5 minutes. If you have a massive amount of
+> data to process, we suggest you increase `mnt.delay` and monitor your PostgreSQL
+> performances to find the best value for it.
 
 ### enableNotifications
 
@@ -252,6 +257,7 @@ or for queues that must **respond quickly to user's actions**.
 Queues that need to handle repetitive but not near-real-time critical tasks may
 decide not to use this feature and just rely on simple polling. This has proven to
 be more effective expecially when dealing with massive data into a queue.
+In this case, you should also increase the value of `mnt.delay` for this queue.
 
 ### Maintenance Settings
 
