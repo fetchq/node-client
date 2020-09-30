@@ -1,5 +1,11 @@
 # FetchQ NodeJS Client - Changelog
 
+## v3.0.0
+
+- Implements Fetchq schema v3.0.0
+- Default settings are tweaked for a fast execution queue
+- `setErrorsRetention` has been renamed to `setLogsRetention`
+
 ## v2.9.1
 
 - connection retry using `promise-retry`

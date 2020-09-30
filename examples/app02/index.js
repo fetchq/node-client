@@ -22,13 +22,9 @@ const client = fetchq({
   queues: [
     {
       name: 'process_signup',
-      isActive: true,
-      enableNotifications: true,
     },
     {
       name: 'process_signup_id',
-      isActive: true,
-      enableNotifications: true,
     },
     {
       name: 'store_users',
@@ -39,6 +35,8 @@ const client = fetchq({
     // validates the username and pushes forward
     {
       queue: 'process_signup',
+      // Maximum execution time before to consider the worker dead
+      // and re-schedule for another attempt.
       lock: '20s',
       handler: async (doc, { client }) => {
         const { username, pipelineId } = doc.payload;
