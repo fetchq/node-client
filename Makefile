@@ -7,7 +7,7 @@ db: cleanup
 		--name fetchq-example-app \
 		-p 5432:5432 \
 		-e POSTGRES_PASSWORD=postgres \
-		postgres
+		postgres:13.0
 
 test-run:
 	npm i
