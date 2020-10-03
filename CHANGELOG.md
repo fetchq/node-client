@@ -1,5 +1,9 @@
 # FetchQ NodeJS Client - Changelog
 
+## v3.1.0
+
+- Implements Fetchq schema v3.1.0
+
 ## v3.0.0
 
 - Implements Fetchq schema v3.0.0
