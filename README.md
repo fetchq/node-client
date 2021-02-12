@@ -223,7 +223,7 @@ const client = fetchq({
       // settings of the per-queue maintenance jobs
       maintenance: {
         // document status maintenance
-        mnt: { delay: '100mm', duration: '1m', limit: 500 },
+        mnt: { delay: '100ms', duration: '1m', limit: 500 },
 
         // queue stats screenshots for plotting perfomances through time
         sts: { delay: '5m', duration: '5m' },
