@@ -1,5 +1,9 @@
 # FetchQ NodeJS Client - Changelog
 
+## v3.2.0
+
+- Update Fetchq library to 3.2.0
+
 ## v3.1.0
 
 - Implements Fetchq schema v3.1.0

@@ -1,7 +1,7 @@
 {
-  "name": "app04",
+  "name": "fetchq-workflow-fastify",
   "version": "1.0.0",
-  "description": "Demonstrates how to decorate the handler context",
+  "description": "Demonstrates how to apply a Fetchq workflow to a REST endpoint",
   "main": "index.js",
   "scripts": {
     "start": "npm link fetchq && nodemon index.js"
@@ -11,5 +11,9 @@
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^2.0.1"
+  },
+  "dependencies": {
+    "fastify": "^2.10.0",
+    "uuid": "^3.3.3"
   }
 }
