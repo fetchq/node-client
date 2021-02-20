@@ -11,15 +11,11 @@
 
 ### 3.1.0
 
-Fetchq client will automatically update the functions on your
-Postgres instance **and the schema is retro-compatible**.
+Fetchq client will automatically update the Fetchq extension and apply
+all the schema changes that the new version puts on the table.
 
-Once the new version is deployed, you should run the following
-query that will perform the necessary schema updates:
-
-```sql
-SELECT * FROM fetchq.upgrade__310__320();
-```
+> **IMPORTANT:** Stop all your workers and update
+> **one service at the time**.
 
 ### All previous:
 
