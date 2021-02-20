@@ -1,5 +1,5 @@
 {
-  "name": "fetchq-hello-world",
+  "name": "fetchq-workflow-api",
   "version": "1.0.0",
   "description": "Demonstrates how to define a queue with a worker",
   "main": "index.js",
