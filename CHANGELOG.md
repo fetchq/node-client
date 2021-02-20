@@ -4,6 +4,33 @@
 
 - Update Fetchq library to 3.2.0
 
+## Migrating from a previous version:
+
+> **NOTE:** make a **full backup** of your data
+> before releasing this version!
+
+### 3.1.0
+
+Fetchq client will automatically update the functions on your
+Postgres instance **and the schema is retro-compatible**.
+
+Once the new version is deployed, you should run the following
+query that will perform the necessary schema updates:
+
+```sql
+SELECT * FROM fetchq.upgrade__310__320();
+```
+
+### All previous:
+
+Be careful as breaking changes may happens with older versions.
+
+1. stop all workers
+2. backup your data!
+3. launch a single client that will update Fetchq on Postgres
+4. check your schema! you might need to make manual updates
+5. 🥺 _sorry, this is last untracked change_ 🥺
+
 ## v3.1.0
 
 - Implements Fetchq schema v3.1.0
