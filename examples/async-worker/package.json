@@ -1,7 +1,7 @@
 {
-  "name": "app02",
+  "name": "fetchq-async-worker",
   "version": "1.0.0",
-  "description": "",
+  "description": "Demonstrates how to register a worker asynchronously",
   "main": "index.js",
   "scripts": {
     "start": "npm link fetchq && nodemon index.js"
@@ -11,9 +11,5 @@
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^2.0.1"
-  },
-  "dependencies": {
-    "fastify": "^2.10.0",
-    "uuid": "^3.3.3"
   }
 }

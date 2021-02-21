@@ -15,6 +15,7 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 - [Live Demos](#live-demos)
 - [DB Configuration](#db-configuration)
 - [Queues Configuration](#queues-configuration)
+- [Add Documents to a Queue](#add-documents-to-a-queue)
 - [Workers Configuration](#workers-configuration)
 - [The Handler Function](#the-handler-function)
 - [Returning Actions](#returning-actions)
@@ -23,6 +24,7 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 - [Logger Configuration](#logger-configuration)
 - [Initialization & Startup](#initialization--startup)
 - [A word on `init()`](#a-word-on-init)
+- [Error Handling](#error-handling)
 - [Workflow API](#workflow-api)
 
 ## What is Fetchq?
@@ -280,6 +282,85 @@ such how many documents per minute or so. This job may be heavy.
 The `drp` job tries to drop data that is not necessary anymore. It removes old error
 logs and metrics. This is not a critical job, but it is definetly good to run it every
 few minutes to keep your database lighter.
+
+---
+
+## Add Documents to a Queue
+
+Once you have defined a working queue, you probably want to add data
+into it for later processing.
+
+There are 2 possible ways add documents into a queue:
+
+- `append()`
+- `push()`
+
+### Append a Document:
+
+Use the `append` API if you want your document to be processed as
+soon as possible, but after the current workload.
+
+```js
+// Signature:
+fetchq.doc.append(targetQueue, documentPayload [, options])
+```
+
+Example:
+
+```js
+const result = await client.doc.append('q1', {
+  createdAt: Date.now(),
+});
+
+// RESULT:
+//   {
+//     subject: 'xxxx-yyy-ddd'
+//   }
+//
+// "subject" is a UUIDv1
+```
+
+👉 [For a better list of examples please take a look at the
+integration test](./lib/functions/doc/doc.append.test.e2e.js)
+
+### Push a Document:
+
+Use the `push` API if you want to be in control of:
+
+- the subject of the document, which is unique for any given queue
+- the point in time when the document should be processed
+
+Signature:
+
+```js
+fetchq.doc.append(targetQueue, document [, options])
+```
+
+Example:
+
+```js
+const res = await client.doc.push('q1', {
+  subject: 'd1',
+  payload: { createdAt: Date.now() },
+  nextIteration: '+1 year',
+});
+
+// RESULT:
+//   {
+//     queued_docs: 1
+//   }
+```
+
+👉 [For a better list of examples please take a look at the
+integration test](./lib/functions/doc/doc.push.test.e2e.js)
+
+#### Push Multiple Documents:
+
+[[TO BE COMPLETED]]
+
+#### Upsert a Document:
+
+[[TO BE COMPLETED]]
 
 ---
 
@@ -680,6 +761,17 @@ const client = fetchq({
 
 ---
 
+## Error Handling
+
+Since v3.2.0, Fetchq client offers hooks to intercept and handle
+errors as they happen in the system.
+
+> Refer to `examples/on-error`.
+
+[[TO BE IMPROVED]]
+
+---
+
 ## Workflow API
 
 You can use a workflow to distribute work into one or more workers and await
@@ -694,6 +786,12 @@ an unresponsive or slow website.
 
 With Fetchq Workflow you can free your main process of any computational burden
 and ejnoy the isolation and horizontal scalability of a queue system!
+
+> Refer to:
+>
+> - [`examples/pipeline-api`](./examples/pipeline-api/)
+> - [`examples/workflow-api`](./examples/workflow-api/)
+> - [`examples/pipeline-fastify`](./examples/workflow-fastify/)
 
 ```js
 const workflow = client.createWorkflow({

@@ -1,11 +1,10 @@
 {
-  "name": "app02",
+  "name": "fetchq-workflow-fastify",
   "version": "1.0.0",
-  "description": "",
+  "description": "Demonstrates how to apply a Fetchq workflow to a REST endpoint",
   "main": "index.js",
   "scripts": {
-    "start": "npm link fetchq && nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npm link fetchq && nodemon index.js"
   },
   "keywords": [],
   "author": "",

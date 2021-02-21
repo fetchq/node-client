@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION fetchq.info(
     OUT version VARCHAR
 ) AS $$
 BEGIN
-	version='3.1.0';
+	version='3.2.0';
 END; $$
 LANGUAGE plpgsql;
 
@@ -61,7 +61,9 @@ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION fetchq.init(
     OUT was_initialized BOOLEAN
-) AS $$
+) 
+SET client_min_messages = error
+AS $$
 BEGIN
     was_initialized = TRUE;
 
@@ -98,7 +100,7 @@ BEGIN
 
     -- Metrics Writes
     CREATE TABLE IF NOT EXISTS fetchq.metrics_writes(
-        id SERIAL PRIMARY KEY,
+        id UUID DEFAULT uuid_generate_v1(),
         created_at TIMESTAMP WITH TIME ZONE,
         queue CHARACTER VARYING(40) NOT NULL,
         metric CHARACTER VARYING(40) NOT NULL,
@@ -279,11 +281,15 @@ CREATE OR REPLACE FUNCTION fetchq.metric_log_increment(
 	OUT affected_rows INTEGER
 ) AS $$
 BEGIN
-	INSERT INTO fetchq.metrics_writes
-	( created_at, queue, metric, increment )
-	VALUES
-	( NOW(), PAR_queue, PAR_subject, PAR_value );
-	GET DIAGNOSTICS affected_rows := ROW_COUNT;
+	IF PAR_value = 0 THEN
+		affected_rows = 0;
+	ELSE
+		INSERT INTO fetchq.metrics_writes
+		( created_at, queue, metric, increment )
+		VALUES
+		( NOW(), PAR_queue, PAR_subject, PAR_value );
+		GET DIAGNOSTICS affected_rows := ROW_COUNT;
+	END IF;
 END; $$
 LANGUAGE plpgsql;DROP FUNCTION IF EXISTS fetchq.metric_log_decrement(CHARACTER VARYING, CHARACTER VARYING, INTEGER);
 CREATE OR REPLACE FUNCTION fetchq.metric_log_decrement(
@@ -293,11 +299,15 @@ CREATE OR REPLACE FUNCTION fetchq.metric_log_decrement(
 	OUT affected_rows INTEGER
 ) AS $$
 BEGIN
-	INSERT INTO fetchq.metrics_writes
-	( created_at, queue, metric, increment )
-	VALUES
-	( NOW(), PAR_queue, PAR_subject, 0 - PAR_value );
-	GET DIAGNOSTICS affected_rows := ROW_COUNT;
+	IF PAR_value = 0 THEN
+		affected_rows = 0;
+	ELSE
+		INSERT INTO fetchq.metrics_writes
+		( created_at, queue, metric, increment )
+		VALUES
+		( NOW(), PAR_queue, PAR_subject, 0 - PAR_value );
+		GET DIAGNOSTICS affected_rows := ROW_COUNT;
+	END IF;
 END; $$
 LANGUAGE plpgsql;DROP FUNCTION IF EXISTS fetchq.metric_log_pack();
 CREATE OR REPLACE FUNCTION fetchq.metric_log_pack(
@@ -673,7 +683,7 @@ DECLARE
 BEGIN
 	success = true;
     SELECT * INTO VAR_r FROM fetchq.metric_get(PAR_queue, PAR_metric);
-    RAISE NOTICE '%', VAR_r.current_value;
+    -- RAISE NOTICE '%', VAR_r.current_value;
 
     VAR_q = 'INSERT INTO fetchq_data.%s__metrics ';
 	VAR_q = VAR_q || '( metric,  value) VALUES ';
@@ -808,7 +818,57 @@ BEGIN
 END; $$
 LANGUAGE plpgsql;
 
--- PUSH MANY DOCUMENTS
+
+-- queue + subject
+DROP FUNCTION IF EXISTS fetchq.doc_push(CHARACTER VARYING, CHARACTER VARYING);
+CREATE OR REPLACE FUNCTION fetchq.doc_push(
+    PAR_queue VARCHAR,
+    PAR_subject VARCHAR,
+    OUT queued_docs INTEGER
+) AS $$
+DECLARE
+	VAR_q VARCHAR;
+    VAR_status INTEGER = 0;
+BEGIN
+    SELECT * INTO queued_docs
+    FROM fetchq.doc_push(PAR_queue, PAR_subject, 0, 0, NOW(), '{}');
+END; $$
+LANGUAGE plpgsql;
+
+-- queue + subject + payload
+DROP FUNCTION IF EXISTS fetchq.doc_push(CHARACTER VARYING, CHARACTER VARYING, JSONB);
+CREATE OR REPLACE FUNCTION fetchq.doc_push(
+    PAR_queue VARCHAR,
+    PAR_subject VARCHAR,
+    PAR_payload JSONB,
+    OUT queued_docs INTEGER
+) AS $$
+DECLARE
+	VAR_q VARCHAR;
+    VAR_status INTEGER = 0;
+BEGIN
+    SELECT * INTO queued_docs
+    FROM fetchq.doc_push(PAR_queue, PAR_subject, 0, 0, NOW(), PAR_payload);
+END; $$
+LANGUAGE plpgsql;
+
+-- queue + subject + nextIteration + payload
+DROP FUNCTION IF EXISTS fetchq.doc_push(CHARACTER VARYING, CHARACTER VARYING, JSONB, TIMESTAMP WITH TIME ZONE);
+CREATE OR REPLACE FUNCTION fetchq.doc_push(
+    PAR_queue VARCHAR,
+    PAR_subject VARCHAR,
+    PAR_payload JSONB,
+    PAR_nextIteration TIMESTAMP WITH TIME ZONE,
+    OUT queued_docs INTEGER
+) AS $$
+DECLARE
+	VAR_q VARCHAR;
+    VAR_status INTEGER = 0;
+BEGIN
+    SELECT * INTO queued_docs
+    FROM fetchq.doc_push(PAR_queue, PAR_subject, 0, 0, PAR_nextIteration, PAR_payload);
+END; $$
+LANGUAGE plpgsql;-- PUSH MANY DOCUMENTS
 DROP FUNCTION IF EXISTS fetchq.doc_push(CHARACTER VARYING, INTEGER, TIMESTAMP WITH TIME ZONE, CHARACTER VARYING);
 CREATE OR REPLACE FUNCTION fetchq.doc_push(
 	PAR_queue VARCHAR,
@@ -934,6 +994,17 @@ BEGIN
 	END;
 END; $$
 LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS fetchq.doc_append(CHARACTER VARYING, JSONB);
+CREATE OR REPLACE FUNCTION fetchq.doc_append(
+    PAR_queue VARCHAR,
+    PAR_payload JSONB,
+    OUT subject VARCHAR
+) AS $$
+BEGIN
+    SELECT * INTO subject FROM fetchq.doc_append(PAR_queue, PAR_payload, 0, 0);
+END; $$
+LANGUAGE plpgsql;
 -- PUSH A SINGLE DOCUMENT
 DROP FUNCTION IF EXISTS fetchq.doc_upsert(CHARACTER VARYING, CHARACTER VARYING, INTEGER, INTEGER, TIMESTAMP WITH TIME ZONE, JSONB);
 CREATE OR REPLACE FUNCTION fetchq.doc_upsert(
@@ -957,7 +1028,7 @@ BEGIN
     SELECT * INTO VAR_r FROM fetchq.doc_push(PAR_queue, PAR_subject, PAR_version, PAR_priority, PAR_nextIteration, PAR_payload);
     queued_docs = VAR_r.queued_docs;
 
-    RAISE NOTICE '>>>>>>>>> QUEUED DOCS %', queued_docs;
+    -- RAISE NOTICE '>>>>>>>>> QUEUED DOCS %', queued_docs;
 
     IF queued_docs = 0 THEN
         VAR_q = '';
@@ -1890,10 +1961,7 @@ BEGIN
 	END IF;
 
     VAR_notify = REPLACE(TG_TABLE_NAME, '__docs', FORMAT('__%s', VAR_event));
-    -- RAISE EXCEPTION 'GGGG %', VAR_notify;
-    -- RAISE EXCEPTION '>>>>>>>>>>>>>>>>> % -- %', VAR_notify, FORMAT('__%s', VAR_event);
-
-    -- -- PERFORM pg_notify('fetchq_debug', VAR_notify);
+    -- PERFORM pg_notify('fetchq_debug', VAR_notify);
 	PERFORM pg_notify('fetchq__' || VAR_notify, NEW.subject);
 	RETURN NEW;
 END; $$
@@ -1936,7 +2004,9 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fetchq.queue_disable_notify(
     PAR_queue VARCHAR,
     OUT success BOOLEAN
-) AS $$
+) 
+SET client_min_messages = error
+AS $$
 DECLARE
 	VAR_q VARCHAR;
 BEGIN
@@ -2207,7 +2277,9 @@ CREATE OR REPLACE FUNCTION fetchq.queue_set_max_attempts(
 	PAR_maxAttempts INTEGER,
 	OUT affected_rows INTEGER,
 	OUT was_reindexed BOOLEAN
-) AS $$
+) 
+SET client_min_messages = error
+AS $$
 DECLARE
 	VAR_q VARCHAR;
 	VAR_r RECORD;
@@ -2247,7 +2319,9 @@ CREATE OR REPLACE FUNCTION fetchq.queue_set_current_version(
 	PAR_newVersion INTEGER,
 	OUT affected_rows INTEGER,
 	OUT was_reindexed BOOLEAN
-) AS $$
+) 
+SET client_min_messages = error
+AS $$
 DECLARE
 	VAR_q VARCHAR;
 	VAR_r RECORD;
@@ -2339,7 +2413,9 @@ CREATE OR REPLACE FUNCTION fetchq.queue_drop_version(
 	PAR_queue VARCHAR,
 	PAR_oldVersion INTEGER,
 	OUT was_dropped BOOLEAN
-) AS $$
+) 
+SET client_min_messages = error
+AS $$
 DECLARE
 	VAR_q VARCHAR;
 	VAR_r RECORD;
@@ -2474,7 +2550,7 @@ BEGIN
         VAR_rowSrc = REPLACE(VAR_rowSrc, 'from', 'a' );
         VAR_rowSrc = REPLACE(VAR_rowSrc, 'to', 'b' );
         VAR_rowSrc = REPLACE(VAR_rowSrc, 'retain', 'c' );
-        select * INTO VAR_rowCfg from jsonb_to_record(VAR_rowSrc::jsonb) as x(a text, b text, c text);
+        SELECT * INTO VAR_rowCfg from jsonb_to_record(VAR_rowSrc::jsonb) as x(a text, b text, c text);
         -- RAISE NOTICE 'from: %, to: %, retain: %', VAR_rowCfg.a, VAR_rowCfg.b, VAR_rowCfg.c;
 
         VAR_q = 'SELECT * FROM fetchq.utils_ts_retain(''fetchq__%s__metrics'', ''created_at'', ''%s'', NOW() - INTERVAL ''%s'', NOW() - INTERVAL ''%s'')';
@@ -2513,7 +2589,7 @@ BEGIN
         VAR_retention = VAR_r.metrics_retention;
     END IF;
 
-    RAISE NOTICE 'retention %', VAR_retention;
+    -- RAISE NOTICE 'retention %', VAR_retention;
 
     -- run the operation
     SELECT * INTO VAR_r FROM fetchq.queue_drop_metrics(PAR_queue, VAR_retention::jsonb);
@@ -2865,5 +2941,32 @@ CREATE OR REPLACE FUNCTION fetchq.trace(
 AS $$
 BEGIN
 	RETURN QUERY SELECT * FROM fetchq.trace(PAR_subject, 'ASC');
+END; $$
+LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS fetchq.upgrade__310__320();
+CREATE OR REPLACE FUNCTION fetchq.upgrade__310__320(
+    OUT success BOOLEAN
+) AS $$
+DECLARE
+    VAR_q VARCHAR;
+BEGIN
+    -- temporary cast integers to strings:
+    ALTER TABLE "fetchq"."metrics_writes" 
+    ALTER COLUMN "id" SET DATA TYPE VARCHAR(36),
+    ALTER COLUMN "id" SET DEFAULT uuid_generate_v1();
+
+    -- update the existing lines to use uuids:
+    UPDATE "fetchq"."metrics_writes" SET "id" = uuid_generate_v1();
+
+    -- cast the string type to be uuid:
+    ALTER TABLE "fetchq"."metrics_writes"
+    ALTER COLUMN "id" SET DATA TYPE UUID USING "id"::UUID,
+    ALTER COLUMN "id" SET DEFAULT uuid_generate_v1();
+
+    -- drop the integer sequence:
+    DROP SEQUENCE IF EXISTS "fetchq"."metrics_writes_id_seq" CASCADE;
+
+    success = true;
 END; $$
 LANGUAGE plpgsql;

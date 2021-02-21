@@ -23,7 +23,7 @@ const client = fetchq({
 });
 
 console.log('###');
-console.log('### connecting to: ');
+console.log('### Connecting to: ');
 console.log('###', client.settings.connectionString);
 console.log('###');
 console.log('');

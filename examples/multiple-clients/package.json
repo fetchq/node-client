@@ -1,0 +1,16 @@
+{
+  "name": "fetchq-multi-client",
+  "version": "1.0.0",
+  "description": "Demonstrate how multiple clients can run coordinated tasks",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm link fetchq && nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.1"
+  }
+}
