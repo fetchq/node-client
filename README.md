@@ -295,32 +295,70 @@ There are 2 possible ways add documents into a queue:
 - `append()`
 - `push()`
 
-### Append a Document
+### Append a Document:
 
 Use the `append` API if you want your document to be processed as
 soon as possible, but after the current workload.
 
 ```js
+// Signature:
 fetchq.doc.append(targetQueue, documentPayload [, options])
 ```
 
 Example:
 
 ```js
-await client.doc.append('q1', {
+const result = await client.doc.append('q1', {
   createdAt: Date.now(),
 });
+
+// RESULT:
+//   {
+//     subject: 'xxxx-yyy-ddd'
+//   }
+//
+// "subject" is a UUIDv1
 ```
 
-### Push a Document
+👉 [For a better list of examples please take a look at the
+integration test](./lib/functions/doc/doc.append.test.e2e.js)
+
+### Push a Document:
+
+Use the `push` API if you want to be in control of:
+
+- the subject of the document, which is unique for any given queue
+- the point in time when the document should be processed
+
+Signature:
+
+```js
+fetchq.doc.append(targetQueue, document [, options])
+```
+
+Example:
+
+```js
+const res = await client.doc.push('q1', {
+  subject: 'd1',
+  payload: { createdAt: Date.now() },
+  nextIteration: '+1 year',
+});
+
+// RESULT:
+//   {
+//     queued_docs: 1
+//   }
+```
+
+👉 [For a better list of examples please take a look at the
+integration test](./lib/functions/doc/doc.push.test.e2e.js)
+
+#### Push Multiple Documents:
 
 [[TO BE COMPLETED]]
 
-#### Push MANY Documents
-
-[[TO BE COMPLETED]]
-
-#### Upsert a Document
+#### Upsert a Document:
 
 [[TO BE COMPLETED]]
 
