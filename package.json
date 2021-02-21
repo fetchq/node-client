@@ -1,6 +1,6 @@
 {
   "name": "fetchq",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "fetchq_version": "3.2.0",
   "description": "FetchqDB Client",
   "main": "index.js",
@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/marcopeg/fetchq#readme",
   "dependencies": {
-    "@fetchq/pg-pubsub": "^0.7.2",
+    "@fetchq/pg-pubsub": "^0.7.3",
     "@marcopeg/utils": "^2.0.1",
     "compare-versions": "^3.6.0",
     "pg": "^8.5.1",

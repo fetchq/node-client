@@ -1,5 +1,9 @@
 # FetchQ NodeJS Client - Changelog
 
+## v3.2.2
+
+- Bumped `@fetchq/pg-pubsub` to keep compatibility with Node 10.x
+
 ## v3.2.1
 
 - Bumped `@fetchq/pg-pubsub` version to align `pg` modules
