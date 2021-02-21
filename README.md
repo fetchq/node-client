@@ -15,6 +15,7 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 - [Live Demos](#live-demos)
 - [DB Configuration](#db-configuration)
 - [Queues Configuration](#queues-configuration)
+- [Add Documents to a Queue](#add-documents-to-a-queue)
 - [Workers Configuration](#workers-configuration)
 - [The Handler Function](#the-handler-function)
 - [Returning Actions](#returning-actions)
@@ -281,6 +282,47 @@ such how many documents per minute or so. This job may be heavy.
 The `drp` job tries to drop data that is not necessary anymore. It removes old error
 logs and metrics. This is not a critical job, but it is definetly good to run it every
 few minutes to keep your database lighter.
+
+---
+
+## Add Documents to a Queue
+
+Once you have defined a working queue, you probably want to add data
+into it for later processing.
+
+There are 2 possible ways add documents into a queue:
+
+- `append()`
+- `push()`
+
+### Append a Document
+
+Use the `append` API if you want your document to be processed as
+soon as possible, but after the current workload.
+
+```js
+fetchq.doc.append(targetQueue, documentPayload [, options])
+```
+
+Example:
+
+```js
+await client.doc.append('q1', {
+  createdAt: Date.now(),
+});
+```
+
+### Push a Document
+
+[[TO BE COMPLETED]]
+
+#### Push MANY Documents
+
+[[TO BE COMPLETED]]
+
+#### Upsert a Document
+
+[[TO BE COMPLETED]]
 
 ---
 
