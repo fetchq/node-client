@@ -1,0 +1,19 @@
+{
+  "name": "big-data",
+  "version": "1.0.0",
+  "description": "Demonstrates how to setup a queue for processing a large number of documents",
+  "main": "index.js",
+  "scripts": {
+    "start:producer": "npm link fetchq && nodemon ./src/producer.js",
+    "start:consumer": "npm link fetchq && nodemon src/consumer.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.1"
+  },
+  "dependencies": {
+    "uuid": "^8.3.2"
+  }
+}
