@@ -9,6 +9,9 @@ start: cleanup
 		-e POSTGRES_PASSWORD=postgres \
 		postgres:13.2
 
+stop:
+	docker stop fetchq-example-app
+
 test-run:
 	npm install
 	npm test
