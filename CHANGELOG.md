@@ -10,6 +10,8 @@
 - added `onBootError()`
 - added "big-data" example
 - added "on-error" example
+- validates queue name in `doc.push()`
+- validates queue name in `doc.append()`
 
 ## Migrating from a previous version:
 
