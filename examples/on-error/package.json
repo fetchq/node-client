@@ -1,0 +1,15 @@
+{
+  "name": "fetchq-on-error",
+  "version": "1.0.0",
+  "description": "Demonstrates how to handle boot errors",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm link fetchq && nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.1"
+  }
+}

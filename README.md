@@ -23,6 +23,7 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 - [Logger Configuration](#logger-configuration)
 - [Initialization & Startup](#initialization--startup)
 - [A word on `init()`](#a-word-on-init)
+- [Error Handling](#error-handling)
 - [Workflow API](#workflow-api)
 
 ## What is Fetchq?
@@ -680,6 +681,17 @@ const client = fetchq({
 
 ---
 
+## Error Handling
+
+Since v3.2.0, Fetchq client offers hooks to intercept and handle
+errors as they happen in the system.
+
+> Refer to `examples/on-error`.
+
+[[TO BE IMPROVED]]
+
+---
+
 ## Workflow API
 
 You can use a workflow to distribute work into one or more workers and await
@@ -694,6 +706,12 @@ an unresponsive or slow website.
 
 With Fetchq Workflow you can free your main process of any computational burden
 and ejnoy the isolation and horizontal scalability of a queue system!
+
+> Refer to:
+>
+> - [`examples/pipeline-api`](./examples/pipeline-api/)
+> - [`examples/workflow-api`](./examples/workflow-api/)
+> - [`examples/pipeline-fastify`](./examples/workflow-fastify/)
 
 ```js
 const workflow = client.createWorkflow({

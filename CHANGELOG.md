@@ -3,6 +3,13 @@
 ## v3.2.0
 
 - Update Fetchq library to 3.2.0
+- added `skipEmitter` option
+- added `onConnectError()`
+- added `onInitError()`
+- added `onStartError()`
+- added `onBootError()`
+- added "big-data" example
+- added "on-error" example
 
 ## Migrating from a previous version:
 
