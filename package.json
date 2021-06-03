@@ -1,7 +1,7 @@
 {
   "name": "fetchq",
-  "version": "3.2.2",
-  "fetchq_version": "3.2.0",
+  "version": "4.0.0",
+  "fetchq_version": "4.0.0",
   "description": "FetchqDB Client",
   "main": "index.js",
   "scripts": {
@@ -27,12 +27,12 @@
   },
   "homepage": "https://github.com/marcopeg/fetchq#readme",
   "dependencies": {
-    "@fetchq/pg-pubsub": "^0.7.3",
+    "@fetchq/pg-pubsub": "^0.8.0",
     "@marcopeg/utils": "^2.0.1",
     "compare-versions": "^3.6.0",
-    "pg": "^8.5.1",
+    "pg": "^8.6.0",
     "promise-retry": "^2.0.1",
-    "serialize-error": "^8.0.1",
+    "serialize-error": "^8.1.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

@@ -13,10 +13,13 @@ stop:
 	docker stop fetchq-example-app
 
 test-run:
+	npm test
+
+test-run-full:
 	npm install
 	npm test
 
-test: start test-run cleanup
+test: cleanup start test-run cleanup
 
 link:
 	npm install

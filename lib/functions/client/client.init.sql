@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION fetchq.info(
     OUT version VARCHAR
 ) AS $$
 BEGIN
-	version='3.2.0';
+	version='4.0.0';
 END; $$
 LANGUAGE plpgsql;
 
@@ -117,7 +117,7 @@ BEGIN
         task character varying(40) NOT NULL,
         queue character varying(40) NOT NULL,
         attempts integer DEFAULT 0,
-        iterations integer DEFAULT 0,
+        iterations bigint DEFAULT 0,
         next_iteration timestamp with time zone,
         last_iteration timestamp with time zone,
         settings jsonb,
@@ -157,6 +157,7 @@ CREATE OR REPLACE FUNCTION fetchq.destroy_with_terrible_consequences(
 DECLARE
     VAR_q RECORD;
 BEGIN
+    DROP SCHEMA IF EXISTS fetchq CASCADE;
     DROP SCHEMA IF EXISTS fetchq_data CASCADE;
 
     -- drop all queues
@@ -614,13 +615,18 @@ $BODY$
 DECLARE
 	VAR_res RECORD;
 BEGIN
+
+	-- remove all existing metrics
+	DELETE FROM "fetchq"."metrics" WHERE "queue" = PAR_queue;
+	DELETE FROM "fetchq"."metrics_writes" WHERE "queue" = PAR_queue;
+
+	-- reset all known metrics
 	SELECT * INTO VAR_res FROM fetchq.metric_compute(PAR_queue);
-	
 	PERFORM fetchq.metric_set(PAR_queue, 'cnt', VAR_res.cnt);
 	PERFORM fetchq.metric_set(PAR_queue, 'pln', VAR_res.pln);
 	PERFORM fetchq.metric_set(PAR_queue, 'pnd', VAR_res.pnd);
 	PERFORM fetchq.metric_set(PAR_queue, 'act', VAR_res.act);
-    PERFORM fetchq.metric_set(PAR_queue, 'cpl', VAR_res.cpl);
+  PERFORM fetchq.metric_set(PAR_queue, 'cpl', VAR_res.cpl);
 	PERFORM fetchq.metric_set(PAR_queue, 'kll', VAR_res.kll);
 	
 	-- forward data out
@@ -628,7 +634,7 @@ BEGIN
 	pln = VAR_res.pln;
 	pnd = VAR_res.pnd;
 	act = VAR_res.act;
-    cpl = VAR_res.cpl;
+  cpl = VAR_res.cpl;
 	kll = VAR_res.kll;
 
 END;
@@ -752,6 +758,7 @@ BEGIN
 END; $$
 LANGUAGE plpgsql;
 -- PUSH A SINGLE DOCUMENT
+-- SELECT * FROM "fetchq"."doc_push"('q1', 'doc1', 0, 0, NOW() + INTERVAL '1m', '{"foo": 123}');
 DROP FUNCTION IF EXISTS fetchq.doc_push(CHARACTER VARYING, CHARACTER VARYING, INTEGER, INTEGER, TIMESTAMP WITH TIME ZONE, JSONB);
 CREATE OR REPLACE FUNCTION fetchq.doc_push(
     PAR_queue VARCHAR,
@@ -766,6 +773,7 @@ DECLARE
 	VAR_q VARCHAR;
     VAR_status INTEGER = 0;
 BEGIN
+
     -- pick right status based on nextIteration date
     IF PAR_nextIteration <= NOW() THEN
 		VAR_status = 1;
@@ -812,8 +820,12 @@ BEGIN
 	END IF;
 
     -- handle exception
-	EXCEPTION WHEN OTHERS THEN BEGIN
-		queued_docs = 0;
+	EXCEPTION 
+        WHEN sqlstate '22001' THEN
+            RAISE EXCEPTION 'The subject exceeds 50 characters limit';
+        WHEN OTHERS THEN BEGIN
+            -- RAISE EXCEPTION '% -- %', sqlstate, SQLERRM;
+            queued_docs = 0;
 	END;
 END; $$
 LANGUAGE plpgsql;
@@ -1050,6 +1062,7 @@ BEGIN
 	END;
 END; $$
 LANGUAGE plpgsql;-- PICK AND LOCK A DOCUMENT THAT NEEDS TO BE EXECUTED NEXT
+-- SELECT * FROM "fetchq"."doc_pick"('foo', 0, 1, '5m');
 -- returns:
 -- { document_structure }
 DROP FUNCTION IF EXISTS fetchq.doc_pick(CHARACTER VARYING, INTEGER, INTEGER, CHARACTER VARYING);
@@ -1064,7 +1077,7 @@ CREATE OR REPLACE FUNCTION fetchq.doc_pick(
 	version INTEGER,
 	priority INTEGER,
 	attempts INTEGER,
-	iterations INTEGER,
+	iterations BIGINT,
 	created_at TIMESTAMP WITH TIME ZONE,
 	last_iteration TIMESTAMP WITH TIME ZONE,
 	next_iteration TIMESTAMP WITH TIME ZONE,
@@ -1091,7 +1104,7 @@ BEGIN
 	VAR_q = VAR_q || 'UPDATE %s ';
 	VAR_q = VAR_q || 'SET status = 2, next_iteration = NOW() + ''%s'', attempts = attempts + 1 ';
 	VAR_q = VAR_q || 'WHERE subject IN( SELECT subject FROM %s ';
-    VAR_q = VAR_q || 'WHERE lock_upgrade IS NULL AND status = 1 AND version = %s AND next_iteration < NOW() ';
+    VAR_q = VAR_q || 'WHERE lock_upgrade IS NULL AND status = 1 AND version = %s AND next_iteration <= NOW() ';
 	VAR_q = VAR_q || 'ORDER BY priority DESC, next_iteration ASC, attempts ASC ';
 	VAR_q = VAR_q || 'LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING subject) ';
 	VAR_q = VAR_q || 'INSERT INTO %s(subject) ';
@@ -1123,6 +1136,81 @@ BEGIN
 END; $$
 LANGUAGE plpgsql;
 
+
+-- PICK AND LOCK A SINGLE DOCUMENT THAT NEEDS TO BE EXECUTED NEXT
+-- SELECT * FROM "fetchq"."doc_pick"('foo','5m');
+-- returns:
+-- { document_structure }
+DROP FUNCTION IF EXISTS fetchq.doc_pick(CHARACTER VARYING, CHARACTER VARYING);
+CREATE OR REPLACE FUNCTION fetchq.doc_pick(
+	PAR_queue VARCHAR,
+	PAR_duration VARCHAR
+) RETURNS TABLE(
+	subject VARCHAR,
+	payload JSONB,
+	version INTEGER,
+	priority INTEGER,
+	attempts INTEGER,
+	iterations BIGINT,
+	created_at TIMESTAMP WITH TIME ZONE,
+	last_iteration TIMESTAMP WITH TIME ZONE,
+	next_iteration TIMESTAMP WITH TIME ZONE,
+	lock_upgrade TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+	RETURN QUERY SELECT * FROM "fetchq"."doc_pick"(PAR_queue, 0, 1, PAR_duration);
+END; $$
+LANGUAGE plpgsql;
+
+-- PICK AND LOCK A SINGLE DOCUMENT THAT NEEDS TO BE EXECUTED NEXT (default lock vale)
+-- SELECT * FROM "fetchq"."doc_pick"('foo');
+-- returns:
+-- { document_structure }
+DROP FUNCTION IF EXISTS fetchq.doc_pick(CHARACTER VARYING);
+CREATE OR REPLACE FUNCTION fetchq.doc_pick(
+	PAR_queue VARCHAR
+) RETURNS TABLE(
+	subject VARCHAR,
+	payload JSONB,
+	version INTEGER,
+	priority INTEGER,
+	attempts INTEGER,
+	iterations BIGINT,
+	created_at TIMESTAMP WITH TIME ZONE,
+	last_iteration TIMESTAMP WITH TIME ZONE,
+	next_iteration TIMESTAMP WITH TIME ZONE,
+	lock_upgrade TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+	RETURN QUERY SELECT * FROM "fetchq"."doc_pick"(PAR_queue, 0, 1, '5m');
+END; $$
+LANGUAGE plpgsql;
+
+
+-- PICK AND LOCK A LIST OF DOCUMENTS THAT NEEDS TO BE EXECUTED NEXT (default lock vale)
+-- SELECT * FROM "fetchq"."doc_pick"('foo', 5);
+-- returns:
+-- { document_structure }
+DROP FUNCTION IF EXISTS fetchq.doc_pick(CHARACTER VARYING, INTEGER);
+CREATE OR REPLACE FUNCTION fetchq.doc_pick(
+	PAR_queue VARCHAR,
+	PAR_limit INTEGER
+) RETURNS TABLE(
+	subject VARCHAR,
+	payload JSONB,
+	version INTEGER,
+	priority INTEGER,
+	attempts INTEGER,
+	iterations BIGINT,
+	created_at TIMESTAMP WITH TIME ZONE,
+	last_iteration TIMESTAMP WITH TIME ZONE,
+	next_iteration TIMESTAMP WITH TIME ZONE,
+	lock_upgrade TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+	RETURN QUERY SELECT * FROM "fetchq"."doc_pick"(PAR_queue, 0, PAR_limit, '5m');
+END; $$
+LANGUAGE plpgsql;
 -- RESCHEDULE AN ACTIVE DOCUMENT
 -- returns:
 -- { affected_rows: 1 }
@@ -1138,16 +1226,22 @@ DECLARE
     VAR_lockName VARCHAR;
 	VAR_q VARCHAR;
 	VAR_iterations INTEGER;
+	VAR_status INTEGER = 0;
 BEGIN
 	VAR_tableName = FORMAT('fetchq_data.%s__docs', PAR_queue);
 	VAR_lockName = FORMAT('fetchq_lock_queue_%s', PAR_queue);
 
+	-- pick right status based on nextIteration date
+    IF PAR_nextIteration <= NOW() THEN
+		VAR_status = 1;
+	END IF;
+
 	VAR_q = 'WITH %s AS( ';
 	VAR_q = VAR_q || 'UPDATE %s AS lc SET ';
-	VAR_q = VAR_q || 'status = 0, next_iteration = ''%s'', attempts = 0, iterations = lc.iterations + 1, last_iteration = NOW() ';
+	VAR_q = VAR_q || 'status = %s, next_iteration = ''%s'', attempts = 0, iterations = lc.iterations + 1, last_iteration = NOW() ';
 	VAR_q = VAR_q || 'WHERE subject IN( SELECT subject FROM %s WHERE subject = ''%s'' AND status = 2 LIMIT 1 ) RETURNING version) ';
 	VAR_q = VAR_q || 'SELECT version FROM %s LIMIT 1;';
-	VAR_q = FORMAT(VAR_q, VAR_lockName, VAR_tableName, PAR_nextIteration, VAR_tableName, PAR_subject, VAR_lockName);
+	VAR_q = FORMAT(VAR_q, VAR_lockName, VAR_tableName, VAR_status, PAR_nextIteration, VAR_tableName, PAR_subject, VAR_lockName);
 
 --	raise log '%', VAR_q;
 
@@ -1158,8 +1252,14 @@ BEGIN
 	IF affected_rows > 0 THEN
 		PERFORM fetchq.metric_log_increment(PAR_queue, 'prc', affected_rows);
 		PERFORM fetchq.metric_log_increment(PAR_queue, 'res', affected_rows);
-		PERFORM fetchq.metric_log_increment(PAR_queue, 'pln', affected_rows);
 		PERFORM fetchq.metric_log_decrement(PAR_queue, 'act', affected_rows);
+
+		-- Update correct counter based on the applied status
+		IF VAR_status = 0 THEN
+			PERFORM fetchq.metric_log_increment(PAR_queue, 'pln', affected_rows);
+		ELSE
+			PERFORM fetchq.metric_log_increment(PAR_queue, 'pnd', affected_rows);
+		END IF;
 	END IF;
 
 	-- raise log 'UPDATE %, DOMAIN %, VERSION %', affectedRows, domainId, versionNum;
@@ -1184,16 +1284,22 @@ DECLARE
     VAR_lockName VARCHAR;
 	VAR_q VARCHAR;
 	VAR_iterations INTEGER;
+	VAR_status INTEGER = 0;
 BEGIN
 	VAR_tableName = FORMAT('fetchq_data.%s__docs', PAR_queue);
 	VAR_lockName = FORMAT('fetchq_lock_queue_%s', PAR_queue);
 
+	-- pick right status based on nextIteration date
+    IF PAR_nextIteration <= NOW() THEN
+		VAR_status = 1;
+	END IF;
+
 	VAR_q = 'WITH %s AS( ';
 	VAR_q = VAR_q || 'UPDATE %s AS lc SET ';
-	VAR_q = VAR_q || 'payload = ''%s'', status = 0, next_iteration = ''%s'', attempts = 0, iterations = lc.iterations + 1, last_iteration = NOW() ';
+	VAR_q = VAR_q || 'payload = ''%s'', status = %s, next_iteration = ''%s'', attempts = 0, iterations = lc.iterations + 1, last_iteration = NOW() ';
 	VAR_q = VAR_q || 'WHERE subject IN( SELECT subject FROM %s WHERE subject = ''%s'' AND status = 2 LIMIT 1 ) RETURNING version) ';
 	VAR_q = VAR_q || 'SELECT version FROM %s LIMIT 1;';
-	VAR_q = FORMAT(VAR_q, VAR_lockName, VAR_tableName, PAR_payload, PAR_nextIteration, VAR_tableName, PAR_subject, VAR_lockName);
+	VAR_q = FORMAT(VAR_q, VAR_lockName, VAR_tableName, PAR_payload, VAR_status, PAR_nextIteration, VAR_tableName, PAR_subject, VAR_lockName);
 
 --	raise log '%', VAR_q;
 
@@ -1204,8 +1310,14 @@ BEGIN
 	IF affected_rows > 0 THEN
 		PERFORM fetchq.metric_log_increment(PAR_queue, 'prc', affected_rows);
 		PERFORM fetchq.metric_log_increment(PAR_queue, 'res', affected_rows);
-		PERFORM fetchq.metric_log_increment(PAR_queue, 'pln', affected_rows);
 		PERFORM fetchq.metric_log_decrement(PAR_queue, 'act', affected_rows);
+
+		-- Update correct counter based on the applied status
+		IF VAR_status = 0 THEN
+			PERFORM fetchq.metric_log_increment(PAR_queue, 'pln', affected_rows);
+		ELSE
+			PERFORM fetchq.metric_log_increment(PAR_queue, 'pnd', affected_rows);
+		END IF;
 	END IF;
 
 	-- raise log 'UPDATE %, DOMAIN %, VERSION %', affectedRows, domainId, versionNum;
@@ -1668,7 +1780,7 @@ CREATE OR REPLACE FUNCTION fetchq.mnt_job_pick(
     task VARCHAR,
     queue VARCHAR,
     attempts INTEGER,
-    iterations INTEGER,
+    iterations BIGINT,
     next_iteration TIMESTAMP WITH TIME ZONE,
     last_iteration TIMESTAMP WITH TIME ZONE,
     settings JSONB,
@@ -2076,7 +2188,7 @@ BEGIN
 	VAR_q = VAR_q || 'priority INTEGER DEFAULT 0,';
 	VAR_q = VAR_q || 'status INTEGER DEFAULT 0,';
 	VAR_q = VAR_q || 'attempts INTEGER DEFAULT 0,';
-	VAR_q = VAR_q || 'iterations INTEGER DEFAULT 0,';
+	VAR_q = VAR_q || 'iterations BIGINT DEFAULT 0,';
 	VAR_q = VAR_q || 'next_iteration TIMESTAMP WITH TIME ZONE,';
 	VAR_q = VAR_q || 'lock_upgrade TIMESTAMP WITH TIME ZONE,';
 	VAR_q = VAR_q || 'created_at TIMESTAMP WITH TIME ZONE,';
@@ -2664,7 +2776,7 @@ CREATE OR REPLACE FUNCTION fetchq.queue_top(
 	version INTEGER,
 	priority INTEGER,
 	attempts INTEGER,
-	iterations INTEGER,
+	iterations BIGINT,
 	created_at TIMESTAMP WITH TIME ZONE,
 	last_iteration TIMESTAMP WITH TIME ZONE,
 	next_iteration TIMESTAMP WITH TIME ZONE,
@@ -2968,5 +3080,29 @@ BEGIN
     DROP SEQUENCE IF EXISTS "fetchq"."metrics_writes_id_seq" CASCADE;
 
     success = true;
+END; $$
+LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS fetchq.upgrade__320__330();
+CREATE OR REPLACE FUNCTION fetchq.upgrade__320__330(
+    OUT success BOOLEAN
+) AS $$
+DECLARE
+    VAR_r RECORD;
+    VAR_q VARCHAR;
+BEGIN
+    -- Update jobs queue iterations counters
+    ALTER TABLE "fetchq"."jobs" ALTER COLUMN "iterations" TYPE bigint;
+    success = true;
+
+    -- Update existing queues
+    FOR VAR_r IN
+		SELECT("name") FROM "fetchq"."queues"
+	LOOP
+        VAR_q = 'ALTER TABLE "fetchq_data"."%s__docs" ALTER COLUMN "iterations" TYPE BIGINT';
+        VAR_q = FORMAT(VAR_q, VAR_r.name);
+	    EXECUTE VAR_q;
+	END LOOP;
+
 END; $$
 LANGUAGE plpgsql;
