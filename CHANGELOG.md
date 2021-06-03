@@ -6,6 +6,9 @@
 - Updates dependencies
 - `doc.pushMany()` supports string based syntax `+1s` or plain dates as text or js object
 - Add tests for `doc.reschedule()`
+- Add `skipUpsertFetchq` configuration flag
+- Add `skipUpsertQueues` configuration flag
+- Improve docs on other initialization feature flags
 
 ## v3.2.2
 

@@ -20,6 +20,7 @@ Provides a NodeJS interface to manage a Fetchq database instace.
 - [The Handler Function](#the-handler-function)
 - [Returning Actions](#returning-actions)
 - [Context Decoration](#context-decoration)
+- [Client Configuration](#client-configuration)
 - [Maintenance Configuration](#maintenance-configuration)
 - [Logger Configuration](#logger-configuration)
 - [Initialization & Startup](#initialization--startup)
@@ -630,6 +631,58 @@ fetchq({
 You can apply this settings at client level, injecting custom stuff
 into every worker, or worker-by-worker by providind the setting within
 the worker's configuration.
+
+---
+
+## Client Configuration
+
+### skipUpsertFetchq
+
+When `true`, the client will not attempt to initialize or upgrade the Fetchq library that is installed on the Postgres db.
+
+[default: false]
+
+You can set this from the environment:  
+
+```bash
+FETCHQ_SKIP_UPSERT_FETCHQ=true
+```
+
+### skipUpsertQueues
+
+When `true`, the client will not attempt to upsert the configured queues, nor to update their configuration.
+
+[default: false]
+
+You can set this from the environment:  
+
+```bash
+FETCHQ_SKIP_UPSERT_QUEUES=true
+```
+
+### skipMaintenance
+
+When `true`, the client will not participate in the maintenance of the queues.
+
+[default: false]
+
+You can set this from the environment:  
+
+```bash
+FETCHQ_SKIP_MAINTENANCE=true
+```
+
+### skipEmitter
+
+When `true`, the client will not create an emitter server, hence it will establish one less connection to the Postgres instance.
+
+[default: false]
+
+You can set this from the environment:  
+
+```bash
+FETCHQ_SKIP_EMITTER=true
+```
 
 ---
 

@@ -23,6 +23,8 @@ const resetFetchq = (fq, config = {}) => async () => {
 const makeClient = (fq, config = {}) =>
   fq({
     connectionString,
+    // skipUpsertQueues: true,
+    // skipUpsertFetchq: true,
     pool: { max: 1 },
     ...config,
   });
