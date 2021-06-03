@@ -13,9 +13,6 @@ stop:
 	docker stop fetchq-example-app
 
 test-run:
-	npm test
-
-test-run-full:
 	npm install
 	npm test
 

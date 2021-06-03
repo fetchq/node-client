@@ -1,5 +1,11 @@
 # FetchQ NodeJS Client - Changelog
 
+## v4.0.0
+
+- Updates Fetchq library to v4.0.0
+- Updates dependencies
+- `doc.pushMany()` supports string based syntax `+1s` or plain dates as text or js object
+
 ## v3.2.2
 
 - Bumped `@fetchq/pg-pubsub` to keep compatibility with Node 10.x
