@@ -5,6 +5,7 @@
 - Updates Fetchq library to v4.0.0
 - Updates dependencies
 - `doc.pushMany()` supports string based syntax `+1s` or plain dates as text or js object
+- Add tests for `doc.reschedule()`
 
 ## v3.2.2
 
