@@ -19,8 +19,8 @@ console.log('');
  * that are given into by Fetchq.
  */
 
-const handler1 = async (doc, { client, foo, faa, fii }) => {
-  client.logger.info('WKR - 1', doc.subject, foo, faa, fii);
+const handler1 = async (doc, { fetchq, foo, faa, fii }) => {
+  fetchq.logger.info('WKR - 1', doc.subject, foo, faa, fii);
 
   await doc.forward('q2');
 
@@ -31,8 +31,8 @@ const handler1 = async (doc, { client, foo, faa, fii }) => {
   });
 };
 
-const handler2 = async (doc, { client, foo, faa, fii }) => {
-  client.logger.info('WKR 2 -', doc.subject, foo, faa, fii);
+const handler2 = async (doc, { fetchq, foo, faa, fii }) => {
+  fetchq.logger.info('WKR 2 -', doc.subject, foo, faa, fii);
 
   // Combine payload and context to decorate the document's
   // payload while marking it as completed.

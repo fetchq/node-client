@@ -88,8 +88,8 @@ module.exports = (config = {}) =>
     workers: [
       {
         queue: 'q1',
-        handler: async (doc, { client }) => {
-          client.logger.info(doc.queue, doc.payload);
+        handler: async (doc, { fetchq }) => {
+          fetchq.logger.info(doc.queue, doc.payload);
           await doc.forward('q2', { q1: true });
           return doc.drop();
         },

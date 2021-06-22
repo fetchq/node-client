@@ -60,9 +60,9 @@ fetchq({
       // in detecting orphan documents and rescheduling them for execution.
       batch: 100,
 
-      handler: (doc, { client }) => {
+      handler: (doc, { fetchq }) => {
         const text = doc.payload.isFuture ? 'planned' : 'appended';
-        client.logger.info(` >>> ${text} document ${doc.subject.substr(0, 5)}`);
+        fetchq.logger.info(` >>> ${text} document ${doc.subject.substr(0, 5)}`);
         return doc.complete();
       },
     },

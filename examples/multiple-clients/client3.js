@@ -17,8 +17,8 @@ module.exports = (config = {}) =>
       {
         queue: 'q3',
         lock: '5s',
-        handler: async (doc, { client }) => {
-          client.logger.info(`${doc.queue} - ${doc.subject}`, doc.payload);
+        handler: async (doc, { fetchq }) => {
+          fetchq.logger.info(`${doc.queue} - ${doc.subject}`, doc.payload);
 
           // if the subject begins with a number, the process is finally completed
           if (

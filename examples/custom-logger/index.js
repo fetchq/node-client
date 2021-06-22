@@ -49,8 +49,8 @@ const client = fetchq({
   queues: [
     {
       name: 'q1',
-      workerHandler: (doc, { client }) => {
-        client.logger.info(`processing document ${doc.subject}`);
+      workerHandler: (doc, { fetchq }) => {
+        fetchq.logger.info(`processing document ${doc.subject}`);
         return doc.drop();
       },
     },

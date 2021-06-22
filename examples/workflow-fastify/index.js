@@ -103,7 +103,7 @@ const client = fetchq({
     // calculates the user's id and tries to save the user.
     {
       queue: 'signup_process',
-      handler: async (doc, { client, workflow }) => {
+      handler: async (doc, { fetchq, workflow }) => {
         // Fetches a payload that is stripped by any workflow
         // related informations.
         const payload = workflow.getPayload();
@@ -115,7 +115,7 @@ const client = fetchq({
 
         // store the username in a unique table:
         // (this simulates a real user storage table)
-        const res = await client.doc.push('store_users', {
+        const res = await fetchq.doc.push('store_users', {
           subject,
           payload: {
             original: doc.payload,

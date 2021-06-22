@@ -1,5 +1,10 @@
 # FetchQ NodeJS Client - Changelog
 
+## v4.1.0
+
+- Add symbol `fetchq` into the Worker's context.  
+  (`client` is now deprecated and will be removed in 5.0)
+
 ## v4.0.0
 
 - Updates Fetchq library to v4.0.0

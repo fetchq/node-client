@@ -7,7 +7,7 @@ console.log('### FetchQ Client // Examples // Ticker');
 console.log('###');
 console.log('');
 
-const pause = (timeout = 0) => new Promise((r) => setTimeout(r, timeout))
+const pause = (timeout = 0) => new Promise((r) => setTimeout(r, timeout));
 
 fetchq({
   clientName: 'c1',
@@ -30,18 +30,18 @@ fetchq({
   // session where each next execution should happen as soon as
   // possible.
   skipEmitter: true,
-  
+
   workers: [
     {
       queue: 'ticker',
       delay: 0,
       sleep: 5000,
-      handler: async (doc, { client }) => {
-        client.logger.info(`Exec task: ${doc.subject} > ${doc.iterations}`);
+      handler: async (doc, { fetchq }) => {
+        fetchq.logger.info(`Exec task: ${doc.subject} > ${doc.iterations}`);
         await pause(1000);
         return doc.reschedule();
       },
-    }
+    },
   ],
 
   // Run your custom logic once the client is ready.
@@ -61,7 +61,7 @@ fetchq({
     //
     // You will notice a delay of approximately 5s before the ticker
     // starts. That's because of `skipEmitter: true`.
-    // 
+    //
     // With that option, the client relies solely on polling and
     // workers are not able to get out of the sleep mode in case new
     // documents are added.
@@ -72,14 +72,14 @@ fetchq({
 
     // Push a task into the queue, such task will be handled by
     // the queue's handler in the workers definition.
-    console.log('> Push a task into the queue')
-    console.log('(It may take up to {worker.sleep}ms for the ticker to start)')
-    await client.doc.push("ticker", {
-      subject: "task1"
+    console.log('> Push a task into the queue');
+    console.log('(It may take up to {worker.sleep}ms for the ticker to start)');
+    await client.doc.push('ticker', {
+      subject: 'task1',
     });
   },
 
   // Start the client, connect to Postgres and run
   // initial configuration and queue upserts.
-  autoStart: true
+  autoStart: true,
 });

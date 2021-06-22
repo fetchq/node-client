@@ -38,21 +38,21 @@ const client = fetchq({
       // Maximum execution time before to consider the worker dead
       // and re-schedule for another attempt.
       lock: '20s',
-      handler: async (doc, { client }) => {
+      handler: async (doc, { fetchq }) => {
         const { username, pipelineId } = doc.payload;
 
         // Apply validation to the payload schema
         // (very sily way to do it)
         if (!username) {
           const message = 'please provide a "username"';
-          await client.emitPipelineFailed(pipelineId, message);
+          await fetchq.emitPipelineFailed(pipelineId, message);
           return doc.kill(message);
         }
 
         // Apply validation to the username
         if (username.length <= 5) {
           const message = 'username is too short';
-          await client.emitPipelineFailed(pipelineId, message);
+          await fetchq.emitPipelineFailed(pipelineId, message);
           return doc.kill(message);
         }
 
@@ -68,7 +68,7 @@ const client = fetchq({
     // calculates the user's id and tries to save the user.
     {
       queue: 'process_signup_id',
-      handler: async (doc, { client }) => {
+      handler: async (doc, { fetchq }) => {
         const { username, pipelineId } = doc.payload;
 
         const payload = {
@@ -78,18 +78,18 @@ const client = fetchq({
 
         // store the username in a unique table:
         // (this simulates a real user storage table)
-        const res = await client.doc.push('store_users', {
+        const res = await fetchq.doc.push('store_users', {
           subject: username,
           payload,
         });
 
         // emit a signal based on the signup result:
         if (res.queued_docs > 0) {
-          await client.emitPipelineComplete(pipelineId, payload);
+          await fetchq.emitPipelineComplete(pipelineId, payload);
           return doc.complete();
         } else {
           message = 'username exists!';
-          client.emitPipelineFailed(pipelineId, message);
+          fetchq.emitPipelineFailed(pipelineId, message);
           return doc.kill({ message });
         }
       },

@@ -14,8 +14,8 @@ const client = fetchq({
   queues: [
     {
       name: 'q1',
-      workerHandler: (doc, { client }) => {
-        client.logger.info(` Working on: ${doc.subject.split('-').shift()}...`);
+      workerHandler: (doc, { fetchq }) => {
+        fetchq.logger.info(` Working on: ${doc.subject.split('-').shift()}...`);
         return doc.complete();
       },
     },

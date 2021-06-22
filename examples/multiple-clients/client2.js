@@ -15,8 +15,8 @@ module.exports = (config = {}) =>
       {
         queue: 'q2',
         concurrency: 5,
-        handler: async (doc, { client }) => {
-          client.logger.info(`${doc.queue} (${doc.iterations})`, doc.payload);
+        handler: async (doc, { fetchq }) => {
+          fetchq.logger.info(`${doc.queue} (${doc.iterations})`, doc.payload);
 
           // after a few repetition, this document gets re-routed into
           // yet another queue for further processing.
