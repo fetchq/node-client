@@ -11,7 +11,7 @@ db: cleanup
 		--name fetchq-example-app \
 		-p 5432:5432 \
 		-e POSTGRES_PASSWORD=postgres \
-		postgres:13.2
+		postgres:16
 
 # Start node
 run:
