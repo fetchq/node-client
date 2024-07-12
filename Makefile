@@ -1,6 +1,7 @@
 cleanup:
 	docker stop fetchq-example-app || true
 	docker rm -f fetchq-example-app || true
+	@rm -rf ./node_modules
 
 start: cleanup
 	docker run -itd \

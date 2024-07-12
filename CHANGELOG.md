@@ -1,5 +1,10 @@
 # FetchQ NodeJS Client - Changelog
 
+## v4.2.0
+
+- Bumped fetchq to 4.0.2
+- Updated dependencies
+
 ## v4.1.0
 
 - Add symbol `fetchq` into the Worker's context.  
